@@ -1,0 +1,41 @@
+.footer {
+  border-top: 1px solid var(--line);
+  margin-top: 80px;
+  padding: 36px 0 48px;
+}
+
+.footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+}
+
+.footer-mark {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+}
+
+.footer-links {
+  display: flex;
+  gap: 20px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.footer-links a:hover {
+  color: var(--Blog);
+}
+
+.footer-note {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 640px) {
+  .footer-note {
+    margin-left: 0;
+  }
+}

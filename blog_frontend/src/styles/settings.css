@@ -1,0 +1,118 @@
+.settings-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 48px 32px 80px;
+}
+
+.settings-page h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 34px;
+  margin: 0 0 32px;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-field label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.settings-field input,
+.settings-field textarea {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  background: var(--paper);
+  color: var(--ink);
+  transition: border-color 0.15s ease;
+}
+
+.settings-field input:focus,
+.settings-field textarea:focus {
+  outline: none;
+  border-color: var(--verso);
+}
+
+.settings-avatar-field {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+}
+
+.avatar-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.avatar-upload-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.avatar-upload-buttons .btn {
+  font-size: 13px;
+  padding: 6px 16px;
+}
+
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.color-picker-row input[type="color"] {
+  width: 40px;
+  height: 40px;
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+  background: none;
+}
+
+.color-hex {
+  font-family: monospace;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.settings-hint {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 4px 0 0;
+}
+
+.settings-save {
+  align-self: flex-start;
+  padding: 12px 32px;
+}
+
+.settings-saved {
+  margin-top: 12px;
+  color: var(--verso);
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .avatar-upload-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}

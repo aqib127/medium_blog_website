@@ -1,0 +1,34 @@
+# Python / Django
+venv/
+env/
+*.pyc
+__pycache__/
+*.log
+*.sqlite3
+*.db
+media/
+staticfiles/
+logs/
+*.py[co]
+*.local
+
+# Environment variables
+.env
+
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+.DS_Store
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+
+# Misc
+*.bak
+*.tmp

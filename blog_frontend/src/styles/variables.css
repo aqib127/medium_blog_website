@@ -1,0 +1,22 @@
+:root {
+  /* ---- color: named tokens ---- */
+  --paper: #FAF8F3;        /* background */
+  --paper-dim: #F1ECE0;    /* recessed panels, cards */
+  --ink: #1C1B1A;          /* primary text */
+  --ink-soft: #57524C;     /* secondary text */
+  --line: #E3DDCE;         /* hairlines, dividers */
+  --verso: #1F4E4A;        /* signature brand ink — links, buttons, active state */
+  --verso-dim: #E8EFEC;    /* pale wash of --verso for chips/hover */
+  --clap: #D1495B;         /* sparing accent — claps, likes, alerts only */
+  --clap-dim: #FBEBEC;
+
+  /* ---- type ---- */
+  --font-display: "Fraunces", "Iowan Old Style", serif;
+  --font-body: "Source Serif 4", Georgia, serif;
+  --font-ui: "Public Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* ---- layout ---- */
+  --max-width: 1240px;
+  --radius: 3px;
+  --shadow-card: 0 1px 2px rgba(28, 27, 26, 0.06), 0 8px 24px rgba(28, 27, 26, 0.04);
+}

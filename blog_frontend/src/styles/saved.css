@@ -1,0 +1,17 @@
+.saved-page {
+  padding: 48px 32px 80px;
+  max-width: 780px;
+}
+
+.saved-page h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 34px;
+  margin: 0 0 24px;
+}
+
+.saved-empty {
+  padding: 40px 0;
+  color: var(--ink-soft);
+  text-align: center;
+}

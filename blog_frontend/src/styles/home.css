@@ -1,0 +1,133 @@
+.hero {
+  padding: 56px 0 48px;
+  border-bottom: 1px solid var(--line);
+}
+
+.hero-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+
+.hero-copy h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 52px;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin: 14px 0 20px;
+  color: var(--ink);
+}
+
+.hero-copy h1 em {
+  color: var(--Blog);
+  font-style: italic;
+}
+
+.hero-copy p {
+  font-family: var(--font-body);
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  max-width: 46ch;
+  margin: 0 0 32px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 14px;
+}
+
+.hero-actions .btn {
+  padding: 13px 26px;
+  font-size: 15px;
+}
+
+.hero-cover {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 28px;
+  box-shadow: var(--shadow-card);
+}
+
+.hero-folio {
+  align-self: flex-end;
+  font-family: var(--font-display);
+  font-style: italic;
+  color: rgba(250, 248, 243, 0.65);
+  font-size: 14px;
+  border: 1px solid rgba(250, 248, 243, 0.3);
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+.hero-cover-tag {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(250, 248, 243, 0.75);
+  margin-bottom: 12px;
+}
+
+.hero-cover-text h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 30px;
+  line-height: 1.18;
+  color: var(--paper);
+  margin: 0 0 14px;
+}
+
+.hero-cover-byline {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(250, 248, 243, 0.8);
+}
+
+.feed-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 72px;
+  padding: 48px 32px 0;
+}
+
+.feed-heading {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  margin: 0 0 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+@media (max-width: 980px) {
+  .hero-inner {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .hero-cover {
+    aspect-ratio: 16 / 9;
+  }
+  .feed-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .hero-copy h1 {
+    font-size: 36px;
+  }
+}

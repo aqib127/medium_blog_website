@@ -1,0 +1,26 @@
+.tag-page {
+  padding: 48px 32px 80px;
+  max-width: 780px;
+}
+
+.tag-header {
+  margin-bottom: 32px;
+}
+
+.tag-header h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 40px;
+  margin: 0 0 4px;
+}
+
+.tag-header p {
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.tag-empty {
+  padding: 40px 0;
+  color: var(--ink-soft);
+  text-align: center;
+}

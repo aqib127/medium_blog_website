@@ -1,0 +1,43 @@
+.follow-list h3 {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+.follow-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.follow-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.follow-list-item:hover .follow-name {
+  color: var(--verso);
+}
+
+.follow-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.follow-handle {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.follow-list-empty {
+  padding: 24px 0;
+  color: var(--ink-soft);
+}

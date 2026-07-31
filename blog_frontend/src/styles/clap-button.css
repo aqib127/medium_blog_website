@@ -1,0 +1,42 @@
+.clap-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--paper-dim);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 16px;
+  color: var(--ink-soft);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 13px;
+  transition: color 0.15s ease, background 0.15s ease;
+  cursor: pointer;
+}
+
+.clap-btn:hover {
+  color: var(--clap);
+  background: var(--clap-dim);
+}
+
+.clap-btn--used {
+  color: var(--clap);
+  background: var(--clap-dim);
+  border-color: var(--clap);
+}
+
+.clap-icon--pop {
+  animation: clap-pop 0.22s ease;
+}
+
+@keyframes clap-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35) rotate(-8deg); }
+  100% { transform: scale(1); }
+}
+
+.clap-btn--vertical {
+  flex-direction: column;
+  padding: 14px 10px;
+  gap: 4px;
+}

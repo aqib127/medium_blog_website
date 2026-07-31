@@ -1,0 +1,26 @@
+.save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--paper-dim);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.save-btn:hover {
+  background: var(--line);
+  border-color: var(--ink-soft);
+}
+
+.save-btn--saved {
+  background: var(--verso-dim);
+  border-color: var(--verso);
+  color: var(--verso);
+}
