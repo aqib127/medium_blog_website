@@ -36,4 +36,6 @@ export const endpoints = {
 
   tags: `${baseURL}articles/tags/`,
   tagArticles: (slug) => `${baseURL}articles/?tags=${slug}`,
+
+  chatbot: `${baseURL}chatbot/`,   // <-- add this
 };

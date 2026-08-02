@@ -12,6 +12,8 @@ import SavedArticles from "./pages/SavedArticles";
 import Drafts from "./pages/Drafts";
 import TagPage from "./pages/TagPage";
 import ProfileSettings from "./pages/ProfileSettings";
+import ChatbotButton from "./components/ChatbotButton";  // <-- import
+import "./styles/chatbot.css";                          // <-- import styles
 
 function App() {
   return (
@@ -31,6 +33,7 @@ function App() {
         <Route path="/tag/:tagName" element={<TagPage />} />
       </Routes>
       <Footer />
+      <ChatbotButton />  {/* <-- add the chatbot button */}
     </div>
   );
 }

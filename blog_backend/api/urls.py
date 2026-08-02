@@ -11,4 +11,5 @@ urlpatterns = [
     path('notifications/', include('notifications.urls')),
     path('history/', include('reading_history.urls')),
     path('reports/', include('reports.urls')),
+    path('chatbot/', include('chatbot.urls')),   # <-- added
 ]
