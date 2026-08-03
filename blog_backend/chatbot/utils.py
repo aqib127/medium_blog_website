@@ -3,7 +3,6 @@ from users.models import User, Follow
 from bookmarks.models import Bookmark
 from comments.models import Comment
 from django.db.models import Q
-from django.shortcuts import get_object_or_404
 
 def search_articles(query, limit=10):
     """Search articles by title, dek, body, or tag name."""
@@ -125,14 +124,16 @@ def get_trending_articles(limit=5):
 def get_featured_article():
     """Get the featured article."""
     try:
-        a = Article.objects.get(featured=True, status='published')
-        return {
-            'id': a.id,
-            'title': a.title,
-            'author': a.author.name,
-            'dek': a.dek,
-        }
-    except Article.DoesNotExist:
+        a = Article.objects.filter(featured=True, status='published').first()
+        if a:
+            return {
+                'id': a.id,
+                'title': a.title,
+                'author': a.author.name,
+                'dek': a.dek,
+            }
+        return None
+    except:
         return None
 
 def get_articles_by_tag(tag_slug):

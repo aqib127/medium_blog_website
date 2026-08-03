@@ -149,8 +149,8 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
-# OpenAI API Key (Chatbot)
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+# Groq API Key
+# GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
 
 LOGGING = {
     'version': 1,
