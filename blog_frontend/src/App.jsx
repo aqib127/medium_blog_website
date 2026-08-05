@@ -12,8 +12,9 @@ import SavedArticles from "./pages/SavedArticles";
 import Drafts from "./pages/Drafts";
 import TagPage from "./pages/TagPage";
 import ProfileSettings from "./pages/ProfileSettings";
-import ChatbotButton from "./components/ChatbotButton";  // <-- import
-import "./styles/chatbot.css";                          // <-- import styles
+import ChatbotButton from "./components/ChatbotButton";
+import "./styles/global.css";
+import "./styles/chatbot.css";
 
 function App() {
   return (
@@ -22,7 +23,6 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/article/:id" element={<Article />} />
-        <Route path="/@:handle" element={<Profile />} />
         <Route path="/write" element={<Write />} />
         <Route path="/search" element={<Search />} />
         <Route path="/signin" element={<SignIn />} />
@@ -31,9 +31,10 @@ function App() {
         <Route path="/drafts" element={<Drafts />} />
         <Route path="/settings" element={<ProfileSettings />} />
         <Route path="/tag/:tagName" element={<TagPage />} />
+        <Route path="/:handle" element={<Profile />} />
       </Routes>
       <Footer />
-      <ChatbotButton />  {/* <-- add the chatbot button */}
+      <ChatbotButton />
     </div>
   );
 }

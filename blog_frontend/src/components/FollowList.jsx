@@ -17,7 +17,7 @@ export default function FollowList({ users, title }) {
               <Avatar
                 name={u.name}
                 avatar={u.avatar}
-                color={u.avatarColor}
+                color={u.avatar_color}
                 size={40}
               />
               <div>

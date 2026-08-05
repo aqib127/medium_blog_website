@@ -19,6 +19,7 @@ export function AuthProvider({ children }) {
         .catch(() => {
           localStorage.removeItem('access');
           localStorage.removeItem('refresh');
+          localStorage.removeItem('user');
         })
         .finally(() => setLoading(false));
     } else {
@@ -28,7 +29,9 @@ export function AuthProvider({ children }) {
 
   const fetchMe = async () => {
     const res = await apiClient(endpoints.me);
-    if (!res.ok) throw new Error('Failed to fetch user');
+    if (!res.ok) {
+      throw new Error('Failed to fetch user');
+    }
     return res.json();
   };
 
@@ -41,9 +44,10 @@ export function AuthProvider({ children }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        // Extract meaningful error message
         let errorMsg = data.detail || data.message || 'Invalid credentials.';
         if (data.non_field_errors) errorMsg = data.non_field_errors.join(' ');
+        if (data.email) errorMsg = data.email.join(' ');
+        if (data.password) errorMsg = data.password.join(' ');
         return { success: false, error: errorMsg };
       }
       localStorage.setItem('access', data.access);
@@ -65,7 +69,6 @@ export function AuthProvider({ children }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        // Build error message from field errors
         let errorMsg = 'Registration failed.';
         if (data.email) errorMsg = data.email.join(' ');
         else if (data.password) errorMsg = data.password.join(' ');
@@ -75,7 +78,6 @@ export function AuthProvider({ children }) {
         else if (data.non_field_errors) errorMsg = data.non_field_errors.join(' ');
         return { success: false, error: errorMsg };
       }
-      // Auto-login after registration
       return await signIn(email, password);
     } catch (error) {
       return { success: false, error: error.message };

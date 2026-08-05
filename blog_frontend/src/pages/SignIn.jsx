@@ -9,11 +9,14 @@ export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     const result = await signIn(email, password);
+    setLoading(false);
     if (result.success) {
       navigate('/');
     } else {
@@ -50,8 +53,8 @@ export default function SignIn() {
             />
           </label>
           {error && <p className="auth-error">{error}</p>}
-          <button type="submit" className="btn btn-primary auth-submit">
-            Sign in
+          <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 

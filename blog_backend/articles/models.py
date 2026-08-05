@@ -3,6 +3,7 @@ from django.utils.text import slugify
 from core.models import BaseModel
 from users.models import User
 
+
 class Tag(BaseModel):
     name = models.CharField(max_length=50, unique=True)
     slug = models.SlugField(max_length=60, unique=True)
@@ -15,6 +16,7 @@ class Tag(BaseModel):
 
     def __str__(self):
         return self.name
+
 
 class Article(BaseModel):
     class Status(models.TextChoices):
@@ -43,12 +45,14 @@ class Article(BaseModel):
     def __str__(self):
         return self.title
 
+
 class ArticleTag(models.Model):
     article = models.ForeignKey(Article, on_delete=models.CASCADE)
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ('article', 'tag')
+
 
 class ArticleImage(BaseModel):
     article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='images')
@@ -58,3 +62,21 @@ class ArticleImage(BaseModel):
 
     class Meta:
         ordering = ['order']
+
+
+class Clap(BaseModel):
+    """
+    Tracks a single clap per (user, article) pair. A user can clap for an
+    article only once — clicking again removes the clap (like/unlike
+    behaviour). Article.claps_count is kept as a denormalized counter that
+    is updated whenever a Clap is created or deleted.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='claps')
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='claps')
+
+    class Meta:
+        unique_together = ('user', 'article')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.name} clapped {self.article.title}"

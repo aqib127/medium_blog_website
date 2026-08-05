@@ -58,38 +58,55 @@ export default function Navbar() {
                 Write
               </Link>
 
-              <button
-                className="nav-avatar-btn"
-                onClick={() => setShowMenu(!showMenu)}
-                aria-label="User menu"
-              >
-                <Avatar
-                  name={user.name}
-                  avatar={user.avatar}
-                  color={user.avatarColor}
-                  size={32}
-                />
-              </button>
+              <div className="nav-avatar-wrap">
+                {/* Clicking the avatar itself navigates straight to the
+                    user's dedicated profile page. */}
+                <Link
+                  to={`/@${user.handle}`}
+                  className="nav-avatar-btn"
+                  aria-label="Go to your profile"
+                  onClick={() => setShowMenu(false)}
+                >
+                  <Avatar
+                    name={user.name}
+                    avatar={user.avatar}
+                    color={user.avatar_color}
+                    size={32}
+                  />
+                </Link>
 
-              {showMenu && (
-                <div className="nav-dropdown">
-                  <Link to={`/@${user.handle}`} onClick={() => setShowMenu(false)}>
-                    Profile
-                  </Link>
-                  <Link to="/saved" onClick={() => setShowMenu(false)}>
-                    Saved
-                  </Link>
-                  <Link to="/drafts" onClick={() => setShowMenu(false)}>
-                    Drafts
-                  </Link>
-                  <Link to="/settings" onClick={() => setShowMenu(false)}>
-                    Settings
-                  </Link>
-                  <button className="btn-text nav-signout" onClick={handleSignOut}>
-                    Sign out
-                  </button>
-                </div>
-              )}
+                <button
+                  type="button"
+                  className="nav-caret-btn"
+                  onClick={() => setShowMenu((m) => !m)}
+                  aria-label="More account options"
+                  aria-expanded={showMenu}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+
+                {showMenu && (
+                  <div className="nav-dropdown">
+                    <Link to={`/@${user.handle}`} onClick={() => setShowMenu(false)}>
+                      Profile
+                    </Link>
+                    <Link to="/saved" onClick={() => setShowMenu(false)}>
+                      Saved
+                    </Link>
+                    <Link to="/drafts" onClick={() => setShowMenu(false)}>
+                      Drafts
+                    </Link>
+                    <Link to="/settings" onClick={() => setShowMenu(false)}>
+                      Settings
+                    </Link>
+                    <button className="btn-text nav-signout" onClick={handleSignOut}>
+                      Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <>

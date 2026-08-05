@@ -11,6 +11,7 @@ export default function Home() {
   const [featured, setFeatured] = useState(null);
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
 
   useEffect(() => {
@@ -21,14 +22,22 @@ export default function Home() {
           apiClient(endpoints.featured),
           apiClient(endpoints.tags),
         ]);
+
+        // Check each response
+        if (!articlesRes.ok) throw new Error(`Articles API error: ${articlesRes.status}`);
+        if (!tagsRes.ok) throw new Error(`Tags API error: ${tagsRes.status}`);
+        // featured may be 404 – that's okay
+
         const articlesData = await articlesRes.json();
         const featuredData = featuredRes.ok ? await featuredRes.json() : null;
         const tagsData = await tagsRes.json();
+
         setArticles(articlesData.results || articlesData);
         setFeatured(featuredData);
         setTags(tagsData);
       } catch (err) {
         console.error('Error loading home:', err);
+        setError(err.message || 'Failed to load content. Please refresh.');
       } finally {
         setLoading(false);
       }
@@ -42,6 +51,7 @@ export default function Home() {
     : articles;
 
   if (loading) return <div className="loading">Loading...</div>;
+  if (error) return <div className="error">{error}</div>;
 
   const featuredAuthor = featured?.author;
 

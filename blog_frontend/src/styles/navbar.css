@@ -85,24 +85,41 @@
   color: var(--ink);
 }
 
-.nav-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+/* Avatar + caret grouping */
+.nav-avatar-wrap {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--paper);
-  font-family: var(--font-ui);
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-  border: none;
+  gap: 4px;
+}
+
+.nav-avatar-btn {
+  display: inline-flex;
+  border-radius: 50%;
+  line-height: 0;
   transition: transform 0.15s ease;
 }
 
-.nav-avatar:hover {
+.nav-avatar-btn:hover {
   transform: scale(1.05);
+}
+
+.nav-caret-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav-caret-btn:hover {
+  background: var(--paper-dim);
+  color: var(--ink);
 }
 
 .nav-signout {
@@ -186,18 +203,12 @@
     font-size: 20px;
   }
 
-  .nav-avatar {
-    width: 28px;
-    height: 28px;
-    font-size: 11px;
-  }
-
   .nav-write span {
     display: none;
   }
 }
 
-/* Ensure buttons are visible by default */
+/* Shared button styles used across the navbar */
 .btn-text {
   background: none;
   border: none;

@@ -12,7 +12,6 @@ export default function Footer() {
           <Link to="/signin">Sign in</Link>
           <Link to="/signup">Get started</Link>
         </nav>
-        {/* <span className="footer-note">A personal project — not affiliated with any publishing platform.</span> */}
       </div>
     </footer>
   );

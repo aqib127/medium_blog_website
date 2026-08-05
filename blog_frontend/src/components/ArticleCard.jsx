@@ -1,42 +1,80 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Avatar from "./Avatar";
 import "../styles/article-card.css";
 
-export default function ArticleCard({ article, dense }) {
-  // article.author is the nested user object from API
-  const author = article.author;
+export default function ArticleCard({ article, dense = false }) {
+  const navigate = useNavigate();
 
-  if (!author) {
-    return null; // fallback if no author
-  }
+  if (!article || !article.author) return null;
+
+  const { author } = article;
+
+  const handleTagClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (article.tags?.[0]?.slug) {
+      navigate(`/tag/${article.tags[0].slug}`);
+    }
+  };
 
   return (
     <article className={`a-card ${dense ? "a-card--dense" : ""}`}>
-      <Link to={`/@${author.handle}`} className="a-card-byline">
+      <Link
+        to={`/@${author.handle}`}
+        className="a-card-author"
+      >
         <Avatar
           name={author.name}
           avatar={author.avatar}
           color={author.avatar_color}
-          size={22}
+          size={26}
         />
-        {author.name}
+
+        <span>{author.name}</span>
       </Link>
 
-      <Link to={`/article/${article.id}`} className="a-card-body">
-        <div className="a-card-text">
-          <h3>{article.title}</h3>
-          {!dense && <p className="a-card-dek">{article.dek}</p>}
-          <div className="a-card-meta">
-            <Link to={`/tag/${article.tags?.[0]?.slug || ''}`} className="tag-pill">
-              {article.tags?.[0]?.name || ''}
-            </Link>
-            <span className="dot">·</span>
+      <Link
+        to={`/article/${article.id}`}
+        className="a-card-content"
+      >
+        <div className="a-card-left">
+
+          <h2 className="a-card-title">
+            {article.title}
+          </h2>
+
+          {!dense && article.dek && (
+            <p className="a-card-description">
+              {article.dek}
+            </p>
+          )}
+
+          <div className="a-card-footer">
+
+            {article.tags?.length > 0 && (
+              <span
+                className="tag-pill"
+                onClick={handleTagClick}
+              >
+                {article.tags[0].name}
+              </span>
+            )}
+
             <span>{article.read_mins} min read</span>
+
           </div>
+
         </div>
-        <span className="a-card-cover" style={{ background: article.cover_color }} aria-hidden="true">
-          <span className="a-card-folio">{article.folio}</span>
-        </span>
+
+        <div
+          className="a-card-image"
+          style={{
+            background: article.cover_color || "#f2f2f2",
+          }}
+        >
+          <span>{article.folio}</span>
+        </div>
       </Link>
     </article>
   );

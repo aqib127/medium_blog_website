@@ -1,28 +1,50 @@
 import { useState } from 'react';
 import { endpoints } from '../config/api';
 import apiClient from '../utils/apiClient';
+import { useAuth } from '../context/AuthContext';
 import '../styles/clap-button.css';
 
-export default function ClapButton({ articleId, initialClaps = 0 }) {
+export default function ClapButton({ articleId, initialClaps = 0, initialClapped = false }) {
+  const { user } = useAuth();
   const [claps, setClaps] = useState(initialClaps);
+  const [clapped, setClapped] = useState(initialClapped);
   const [active, setActive] = useState(false);
-  const [userClaps, setUserClaps] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const handleClap = async () => {
-    if (loading || userClaps >= 12) return;
+    if (loading) return;
+
+    if (!user) {
+      window.location.href = '/signin';
+      return;
+    }
+
+    // Optimistic update so the UI feels instant, then reconcile with the
+    // server's authoritative count/clapped state.
+    const previousClaps = claps;
+    const previousClapped = clapped;
+    const nextClapped = !clapped;
+
+    setClapped(nextClapped);
+    setClaps((c) => (nextClapped ? c + 1 : Math.max(0, c - 1)));
     setLoading(true);
-    try {
-      const res = await apiClient(endpoints.clap(articleId), {
-        method: 'POST',
-      });
-      const data = await res.json();
-      setClaps(data.claps_count);
-      setUserClaps((c) => c + 1);
+
+    if (nextClapped) {
       setActive(true);
       setTimeout(() => setActive(false), 220);
+    }
+
+    try {
+      const res = await apiClient(endpoints.clap(articleId), { method: 'POST' });
+      if (!res.ok) throw new Error('Clap request failed');
+      const data = await res.json();
+      setClaps(data.claps_count);
+      setClapped(data.clapped);
     } catch (err) {
       console.error('Clap error:', err);
+      // Roll back the optimistic update on failure.
+      setClaps(previousClaps);
+      setClapped(previousClapped);
     } finally {
       setLoading(false);
     }
@@ -30,10 +52,10 @@ export default function ClapButton({ articleId, initialClaps = 0 }) {
 
   return (
     <button
-      className={`clap-btn ${userClaps > 0 ? 'clap-btn--used' : ''}`}
+      className={`clap-btn ${clapped ? 'clap-btn--used' : ''}`}
       onClick={handleClap}
-      aria-pressed={userClaps > 0}
-      aria-label="Clap for this story"
+      aria-pressed={clapped}
+      aria-label={clapped ? 'Remove your clap' : 'Clap for this story'}
       disabled={loading}
     >
       <span className={`clap-icon ${active ? 'clap-icon--pop' : ''}`}>

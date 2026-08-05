@@ -1,11 +1,13 @@
 from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db import models
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Article, Tag
+from .models import Article, Tag, Clap
 from .serializers import ArticleSerializer, ArticleCreateUpdateSerializer, TagSerializer
 from core.permissions import IsOwnerOrReadOnly
 from core.pagination import StandardResultsSetPagination
+
 
 class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
@@ -23,22 +25,41 @@ class ArticleViewSet(viewsets.ModelViewSet):
             return ArticleCreateUpdateSerializer
         return ArticleSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
     def get_queryset(self):
         qs = super().get_queryset()
         if self.action == 'list':
-            # Return only published articles for public list
+            user = self.request.user
+            status_param = self.request.query_params.get('status')
+            # A signed-in user asking for status=draft only ever gets their
+            # OWN drafts — drafts are never publicly listable.
+            if status_param == 'draft':
+                if user.is_authenticated:
+                    return qs.filter(author=user, status=Article.Status.DRAFT)
+                return qs.none()
             return qs.filter(status=Article.Status.PUBLISHED)
         return qs
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def clap(self, request, pk=None):
         article = self.get_object()
-        article.claps_count += 1
-        article.save(update_fields=['claps_count'])
-        return Response({'claps_count': article.claps_count})
+        clap, created = Clap.objects.get_or_create(user=request.user, article=article)
+        if created:
+            Article.objects.filter(pk=article.pk).update(claps_count=models.F('claps_count') + 1)
+            clapped = True
+        else:
+            clap.delete()
+            Article.objects.filter(pk=article.pk).update(claps_count=models.F('claps_count') - 1)
+            clapped = False
+        article.refresh_from_db(fields=['claps_count'])
+        return Response({'claps_count': article.claps_count, 'clapped': clapped})
 
     @action(detail=False, methods=['get'])
     def featured(self, request):
@@ -58,6 +79,7 @@ class ArticleViewSet(viewsets.ModelViewSet):
         articles = Article.objects.filter(status=Article.Status.PUBLISHED).order_by('-claps_count')[:limit]
         serializer = self.get_serializer(articles, many=True)
         return Response(serializer.data)
+
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()

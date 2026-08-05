@@ -13,11 +13,12 @@ export default function Write() {
 
   const [title, setTitle] = useState('');
   const [dek, setDek] = useState('');
-  const [tag, setTag] = useState(null); // will hold tag ID (integer)
+  const [tag, setTag] = useState(null); // tag ID (integer)
   const [body, setBody] = useState('');
   const [tags, setTags] = useState([]);
   const [published, setPublished] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
 
   // Fetch available tags on mount
   useEffect(() => {
@@ -28,7 +29,7 @@ export default function Write() {
         const data = await res.json();
         setTags(data);
         if (data.length > 0) {
-          setTag(data[0].id); // set default to first tag ID
+          setTag(data[0].id);
         }
       } catch (err) {
         console.error('Error fetching tags:', err);
@@ -48,7 +49,6 @@ export default function Write() {
           const data = await res.json();
           setTitle(data.title || '');
           setDek(data.dek || '');
-          // Extract tag ID if the article has tags
           if (data.tags && data.tags.length > 0) {
             setTag(data.tags[0].id);
           }
@@ -67,9 +67,8 @@ export default function Write() {
   const wordCount = body.trim() ? body.trim().split(/\s+/).length : 0;
   const readMins = Math.max(1, Math.round(wordCount / 200));
 
-  // ---- Helper to build the payload ----
+  // ---- Build payload ----
   const buildPayload = (status) => {
-    // tag is either an ID (number) or null
     const tagIds = tag !== null && tag !== undefined ? [Number(tag)] : [];
     return {
       title: title.trim(),
@@ -82,7 +81,11 @@ export default function Write() {
 
   // ---- Save Draft ----
   const handleSaveDraft = async () => {
+    setSaveMessage('');
+    setLoading(true);
     const payload = buildPayload('draft');
+    console.log('Saving draft with payload:', payload);
+
     try {
       const url = draftId ? endpoints.article(draftId) : endpoints.articles;
       const method = draftId ? 'PUT' : 'POST';
@@ -90,13 +93,16 @@ export default function Write() {
         method,
         body: JSON.stringify(payload),
       });
+
       if (res.ok) {
         const data = await res.json();
         if (!draftId) {
-          // If new draft, redirect to edit mode with draft ID
+          // New draft created – redirect to edit mode
           navigate(`/write?draft=${data.id}`);
+          setSaveMessage('Draft created! Redirecting...');
         } else {
-          alert('Draft saved successfully!');
+          setSaveMessage('Draft saved successfully!');
+          setTimeout(() => setSaveMessage(''), 3000);
         }
       } else {
         const errorData = await res.json();
@@ -106,14 +112,16 @@ export default function Write() {
     } catch (err) {
       console.error('Save draft error:', err);
       alert('Network error while saving draft.');
+    } finally {
+      setLoading(false);
     }
   };
 
   // ---- Publish ----
   const handlePublish = async (e) => {
     e.preventDefault();
+    setSaveMessage('');
 
-    // Validate required fields
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
     if (!trimmedTitle) {
@@ -127,7 +135,7 @@ export default function Write() {
 
     setLoading(true);
     const payload = buildPayload('published');
-    console.log('Publishing payload:', payload); // for debugging
+    console.log('Publishing payload:', payload);
 
     try {
       const url = draftId ? endpoints.article(draftId) : endpoints.articles;
@@ -167,8 +175,9 @@ export default function Write() {
             <span className="eyebrow">{draftId ? 'Editing draft' : 'New story'}</span>
             <div className="editor-toolbar-right">
               <span className="editor-readtime">{wordCount} words · {readMins} min read</span>
-              <button type="button" className="btn btn-ghost" onClick={handleSaveDraft}>
-                Save draft
+              {saveMessage && <span className="save-message">{saveMessage}</span>}
+              <button type="button" className="btn btn-ghost" onClick={handleSaveDraft} disabled={loading}>
+                {loading ? 'Saving...' : 'Save draft'}
               </button>
               <button type="submit" className="btn btn-primary" disabled={loading || !title.trim() || !body.trim()}>
                 {loading ? 'Publishing...' : 'Publish'}

@@ -32,7 +32,7 @@ export default function CommentSection({ count }) {
       {
         id: `c${Date.now()}`,
         name: user?.name || "You",
-        color: user?.avatarColor || "#1F4E4A",
+        color: user?.avatar_color || "#1F4E4A",
         avatar: user?.avatar || null,
         time: "just now",
         text: draft.trim(),
@@ -51,7 +51,7 @@ export default function CommentSection({ count }) {
           <Avatar
             name={user.name}
             avatar={user.avatar}
-            color={user.avatarColor}
+            color={user.avatar_color}
             size={34}
           />
           <div className="comment-form-field">
