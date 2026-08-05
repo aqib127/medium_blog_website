@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { endpoints } from '../config/api';
 import apiClient from '../utils/apiClient';
 import ArticleCard from '../components/ArticleCard';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 import '../styles/search.css';
 
 export default function Search() {
@@ -50,9 +52,7 @@ export default function Search() {
     search();
   }, [query, activeTag]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-  };
+  const handleSubmit = (e) => { e.preventDefault(); };
 
   return (
     <div className="search-page container">
@@ -63,19 +63,31 @@ export default function Search() {
             <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by title, topic, or writer" autoFocus />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by title, topic, or writer"
+            autoFocus
+          />
         </form>
         <div className="search-tags">
           <button className={!activeTag ? 'active' : ''} onClick={() => setActiveTag(null)}>All topics</button>
           {tags.map((t) => (
-            <button key={t.id} className={activeTag === t.slug ? 'active' : ''} onClick={() => setActiveTag(t.slug)}>{t.name}</button>
+            <button
+              key={t.id}
+              className={activeTag === t.slug ? 'active' : ''}
+              onClick={() => setActiveTag(t.slug)}
+            >
+              {t.name}
+            </button>
           ))}
         </div>
       </header>
       <div className="search-results">
         <p className="search-count">{results.length} {results.length === 1 ? 'result' : 'results'}</p>
         {loading ? (
-          <p>Searching...</p>
+          Array(3).fill().map((_, i) => <ArticleCard key={i} loading dense />)
         ) : results.length ? (
           results.map((a) => <ArticleCard key={a.id} article={a} dense />)
         ) : (

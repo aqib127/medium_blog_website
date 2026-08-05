@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from core.models import BaseModel
 from .managers import UserManager
+import os
 
 class User(AbstractUser, BaseModel):
     username = None
@@ -32,9 +33,20 @@ class User(AbstractUser, BaseModel):
         return ''.join([part[0].upper() for part in self.name.split()[:2]])
 
     def save(self, *args, **kwargs):
+        # Delete old avatar file if changed
+        if self.pk:
+            try:
+                old_instance = User.objects.get(pk=self.pk)
+                if old_instance.avatar and old_instance.avatar != self.avatar:
+                    if os.path.isfile(old_instance.avatar.path):
+                        os.remove(old_instance.avatar.path)
+            except User.DoesNotExist:
+                pass
+
         if not self.handle:
             from core.utils import generate_unique_slug
             self.handle = generate_unique_slug(User, 'handle', self.name)
+
         super().save(*args, **kwargs)
 
 class UserSettings(BaseModel):

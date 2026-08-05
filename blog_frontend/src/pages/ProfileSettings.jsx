@@ -35,7 +35,7 @@ export default function ProfileSettings() {
     }
   }, [user]);
 
-  // if (!user) return <Navigate to="/signin" replace />;
+  if (!user) return <Navigate to="/signin" replace />;
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
@@ -53,20 +53,31 @@ export default function ProfileSettings() {
   };
 
   const handleRemoveAvatar = async () => {
-    setAvatarPreview(null);
-    setAvatar(null);
-    await apiClient(endpoints.userAvatar(user.handle), {
-      method: "UPDATE",
-      body: JSON.stringify({ avatar: null }),
-    });
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    setLoading(true);
+    try {
+      const res = await apiClient(endpoints.userAvatar(user.handle), {
+        method: "PATCH",
+        body: JSON.stringify({ avatar: null }),
+      });
+      if (!res.ok) throw new Error("Failed to remove avatar");
+      const data = await res.json();
+      setAvatarPreview(null);
+      setAvatar(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      const updatedUser = { ...user, avatar: null };
+      updateUser(updatedUser);
+    } catch (err) {
+      console.error("Remove avatar error:", err);
+      alert("Error removing avatar.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Update profile fields (JSON)
       const profileRes = await apiClient(endpoints.userUpdate(user.handle), {
         method: "PUT",
         body: JSON.stringify({
@@ -82,13 +93,12 @@ export default function ProfileSettings() {
       if (!profileRes.ok) throw new Error("Failed to update profile");
       const updatedUser = await profileRes.json();
 
-      // Update avatar if changed (FormData)
       if (avatar && typeof avatar !== "string") {
         const formData = new FormData();
         formData.append("avatar", avatar);
         const avatarRes = await apiClient(endpoints.userAvatar(user.handle), {
           method: "PATCH",
-          headers: {}, // Let browser set Content-Type for FormData
+          headers: {},
           body: formData,
         });
         if (avatarRes.ok) {
@@ -136,15 +146,16 @@ export default function ProfileSettings() {
                 onChange={handleAvatarChange}
                 style={{ display: "none" }}
               />
-              {/* {(avatar || avatarPreview) && (
+              {(avatar || avatarPreview) && (
                 <button
                   type="button"
                   className="btn btn-ghost"
                   onClick={handleRemoveAvatar}
+                  disabled={loading}
                 >
                   Remove
                 </button>
-              )} */}
+              )}
             </div>
           </div>
           <p className="settings-hint">PNG, JPG up to 2MB</p>

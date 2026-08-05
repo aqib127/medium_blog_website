@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { endpoints } from '../config/api';
 import apiClient from '../utils/apiClient';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 import '../styles/drafts.css';
 
 export default function Drafts() {
@@ -11,7 +13,10 @@ export default function Drafts() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     const fetchDrafts = async () => {
       try {
         const res = await apiClient(`${endpoints.articles}?status=draft`);
@@ -46,7 +51,19 @@ export default function Drafts() {
     );
   }
 
-  if (loading) return <div className="loading">Loading drafts...</div>;
+  if (loading) {
+    return (
+      <div className="drafts-page container">
+        <h1><Skeleton width={200} /></h1>
+        {[1,2].map(i => (
+          <div key={i} className="draft-item">
+            <div><Skeleton count={2} /></div>
+            <Skeleton width={60} />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="drafts-page container">

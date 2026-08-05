@@ -2,10 +2,11 @@ import { Link } from "react-router-dom";
 import { endpoints } from "../config/api";
 import apiClient from "../utils/apiClient";
 import { useEffect, useState } from "react";
-import Avatar from "./Avatar";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 import "../styles/sidebar.css";
 
-export default function Sidebar({ activeTag, onTagSelect, tags }) {
+export default function Sidebar({ activeTag, onTagSelect, tags, loading = false }) {
   const [trending, setTrending] = useState([]);
 
   useEffect(() => {
@@ -20,6 +21,29 @@ export default function Sidebar({ activeTag, onTagSelect, tags }) {
     };
     fetchTrending();
   }, []);
+
+  if (loading) {
+    return (
+      <aside className="sidebar">
+        <div className="sidebar-block">
+          <h4 className="sidebar-heading"><Skeleton width={120} /></h4>
+          <div className="tag-filters">
+            <Skeleton width={60} height={30} />
+            <Skeleton width={80} height={30} />
+            <Skeleton width={70} height={30} />
+          </div>
+        </div>
+        <div className="sidebar-block">
+          <h4 className="sidebar-heading"><Skeleton width={100} /></h4>
+          <ol className="trending-list">
+            {[1,2,3].map(i => (
+              <li key={i}><Skeleton count={2} /></li>
+            ))}
+          </ol>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="sidebar">
@@ -67,15 +91,6 @@ export default function Sidebar({ activeTag, onTagSelect, tags }) {
             );
           })}
         </ol>
-      </div>
-
-      <div className="sidebar-block">
-        <h4 className="sidebar-heading">Writers to follow</h4>
-        <ul className="writer-list">
-          {/* For now, we can still use mock users, or we could fetch from API */}
-          {/* We'll keep mock users for simplicity, but better to fetch from API later */}
-          {/* Temporarily keep existing mock users until we have an endpoint */}
-        </ul>
       </div>
     </aside>
   );

@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import ArticleCard from '../components/ArticleCard';
 import Avatar from '../components/Avatar';
 import FollowList from '../components/FollowList';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 import '../styles/profile.css';
 
 const TABS = [
@@ -66,8 +68,6 @@ export default function Profile() {
           setIsFollowing(followingList.some((u) => u.id === user.id));
         }
 
-        // Reading list (bookmarks) and drafts are private — only fetch
-        // them when the viewer IS the profile owner.
         if (user && user.handle === cleanHandle) {
           const [bookmarksRes, draftsRes] = await Promise.all([
             apiClient(endpoints.bookmarks),
@@ -92,13 +92,9 @@ export default function Profile() {
     };
 
     fetchProfile();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [cleanHandle, user]);
 
-  // If the profile owner changes drafts/tabs, reset to Stories tab so a
-  // visitor never gets stuck on a tab that no longer applies to them.
   useEffect(() => {
     if (tab === 'drafts' && !isOwnProfile) setTab('stories');
   }, [isOwnProfile, tab]);
@@ -135,7 +131,33 @@ export default function Profile() {
     }
   };
 
-  if (loading) return <div className="loading">Loading profile...</div>;
+  if (loading) {
+    return (
+      <div className="profile-page container">
+        <div className="profile-layout">
+          <main className="profile-main">
+            <h1 className="profile-username"><Skeleton width={200} /></h1>
+            <nav className="profile-tabs">
+              {TABS.filter(t => !t.ownOnly || true).map(t => (
+                <button key={t.key}><Skeleton width={80} /></button>
+              ))}
+            </nav>
+            <div className="profile-tab-panel">
+              <Skeleton count={3} height={100} />
+            </div>
+          </main>
+          <aside className="profile-sidebar">
+            <Skeleton circle width={96} height={96} />
+            <Skeleton width={150} height={30} />
+            <Skeleton width={100} />
+            <Skeleton count={2} />
+            <Skeleton width={120} height={36} />
+          </aside>
+        </div>
+      </div>
+    );
+  }
+
   if (!profileUser) return <Navigate to="/" replace />;
 
   const memberSince = profileUser.date_joined
@@ -147,7 +169,6 @@ export default function Profile() {
   return (
     <div className="profile-page container">
       <div className="profile-layout">
-        {/* ---------------- Left content ---------------- */}
         <main className="profile-main">
           <h1 className="profile-username">{profileUser.name}</h1>
 
@@ -222,7 +243,6 @@ export default function Profile() {
           </div>
         </main>
 
-        {/* ---------------- Right sidebar ---------------- */}
         <aside className="profile-sidebar">
           <Avatar
             name={profileUser.name}
@@ -261,20 +281,12 @@ export default function Profile() {
           {(profileUser.twitter || profileUser.github || profileUser.website) && (
             <div className="profile-sidebar-social">
               {profileUser.twitter && (
-                <a
-                  href={`https://twitter.com/${profileUser.twitter.replace('@', '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <a href={`https://twitter.com/${profileUser.twitter.replace('@', '')}`} target="_blank" rel="noopener noreferrer">
                   🐦 {profileUser.twitter}
                 </a>
               )}
               {profileUser.github && (
-                <a
-                  href={`https://github.com/${profileUser.github}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <a href={`https://github.com/${profileUser.github}`} target="_blank" rel="noopener noreferrer">
                   🐙 {profileUser.github}
                 </a>
               )}

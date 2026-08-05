@@ -7,12 +7,13 @@ import ClapButton from '../components/ClapButton';
 import CommentSection from '../components/CommentSection';
 import SaveButton from '../components/SaveButton';
 import Avatar from '../components/Avatar';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 import '../styles/article.css';
 
 export default function Article() {
   const { id } = useParams();
   const [article, setArticle] = useState(null);
-  const [comments, setComments] = useState([]);
   const [progress, setProgress] = useState(0);
   const [following, setFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -22,15 +23,12 @@ export default function Article() {
   useEffect(() => {
     const fetchArticle = async () => {
       try {
-        const [articleRes, commentsRes] = await Promise.all([
+        const [articleRes] = await Promise.all([
           apiClient(endpoints.article(id)),
-          apiClient(endpoints.commentList(id)),
         ]);
         if (!articleRes.ok) throw new Error('Article not found');
         const articleData = await articleRes.json();
-        const commentsData = commentsRes.ok ? await commentsRes.json() : [];
         setArticle(articleData);
-        setComments(commentsData.results || commentsData);
       } catch (err) {
         console.error(err);
       } finally {
@@ -54,7 +52,34 @@ export default function Article() {
     return () => window.removeEventListener('scroll', onScroll);
   }, [id]);
 
-  if (loading) return <div className="loading">Loading article...</div>;
+  if (loading) {
+    return (
+      <article className="reader">
+        <div className="reader-content container">
+          <header className="reader-header">
+            <Skeleton width={100} />
+            <Skeleton height={60} count={2} />
+            <Skeleton height={30} count={3} />
+            <div className="reader-byline">
+              <Skeleton circle width={46} height={46} />
+              <div>
+                <Skeleton width={150} />
+                <Skeleton width={100} />
+              </div>
+            </div>
+            <div className="reader-actions">
+              <Skeleton width={80} height={36} />
+              <Skeleton width={80} height={36} />
+            </div>
+          </header>
+          <div className="reader-body">
+            <Skeleton count={8} />
+          </div>
+        </div>
+      </article>
+    );
+  }
+
   if (!article) return <Navigate to="/" replace />;
 
   const author = article.author;
@@ -79,7 +104,12 @@ export default function Article() {
 
           <div className="reader-byline">
             <Link to={`/@${author.handle}`}>
-              <Avatar name={author.name} avatar={author.avatar} color={author.avatar_color} size={46} />
+              <Avatar
+                name={author.name}
+                avatar={author.avatar}
+                color={author.avatar_color}
+                size={46}
+              />
             </Link>
             <div className="reader-byline-text">
               <Link to={`/@${author.handle}`} className="reader-author-name">{author.name}</Link>
@@ -105,9 +135,7 @@ export default function Article() {
         </header>
 
         <div className="reader-body" ref={bodyRef}>
-          {article.body.split('\n').map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
+          <div dangerouslySetInnerHTML={{ __html: article.body }} />
         </div>
 
         <div className="reader-actions reader-actions--footer">
@@ -115,7 +143,7 @@ export default function Article() {
           <SaveButton articleId={article.id} />
         </div>
 
-        <CommentSection count={article.comments_count} />
+        <CommentSection articleId={article.id} initialCount={article.comments_count} />
       </div>
     </article>
   );

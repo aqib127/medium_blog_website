@@ -1,5 +1,5 @@
-// Use environment variable, fallback to localhost:8002
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8002/api/v1/';
+// Use environment variable, fallback to localhost:8000
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1/';
 
 export const endpoints = {
   register: `${baseURL}auth/register/`,

@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { endpoints } from '../config/api';
 import apiClient from '../utils/apiClient';
 import ArticleCard from '../components/ArticleCard';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 import '../styles/saved.css';
 
 export default function SavedArticles() {
@@ -11,12 +13,14 @@ export default function SavedArticles() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     const fetchBookmarks = async () => {
       try {
         const res = await apiClient(endpoints.bookmarks);
         const data = await res.json();
-        // Handle pagination
         const bookmarks = data.results || data;
         setSavedArticles(bookmarks.map((b) => b.article));
       } catch (err) {
@@ -37,7 +41,14 @@ export default function SavedArticles() {
     );
   }
 
-  if (loading) return <div className="loading">Loading saved stories...</div>;
+  if (loading) {
+    return (
+      <div className="saved-page container">
+        <h1><Skeleton width={200} /></h1>
+        {[1,2,3].map(i => <ArticleCard key={i} loading />)}
+      </div>
+    );
+  }
 
   return (
     <div className="saved-page container">

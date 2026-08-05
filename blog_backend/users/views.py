@@ -14,6 +14,7 @@ from .serializers import (
 from core.permissions import IsOwnerOrReadOnly
 from articles.serializers import ArticleSerializer
 from articles.models import Article
+import os
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -141,7 +142,6 @@ class ProfileUpdateView(generics.UpdateAPIView):
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
-        # Return full user data with avatar URL
         user_serializer = UserSerializer(instance, context={'request': request})
         return Response(user_serializer.data)
 
@@ -153,11 +153,23 @@ class AvatarUpdateView(APIView):
         if user != request.user:
             raise PermissionDenied('You can only update your own avatar.')
 
+        # Handle removal via JSON: { "avatar": null }
+        if request.content_type == 'application/json':
+            data = request.data
+            if data.get('avatar') is None:
+                if user.avatar:
+                    if os.path.isfile(user.avatar.path):
+                        os.remove(user.avatar.path)
+                    user.avatar = None
+                    user.save(update_fields=['avatar'])
+                return Response({'avatar_url': None})
+            return Response({'detail': 'Invalid JSON payload.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Otherwise handle file upload
         if 'avatar' not in request.FILES:
             return Response({'detail': 'No avatar file provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
         user.avatar = request.FILES['avatar']
         user.save()
-        # Build full URL
         avatar_url = request.build_absolute_uri(user.avatar.url) if user.avatar else None
         return Response({'avatar_url': avatar_url})

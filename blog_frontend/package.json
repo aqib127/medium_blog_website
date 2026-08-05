@@ -12,7 +12,10 @@
   "dependencies": {
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.18.1"
+    "react-router-dom": "^7.18.1",
+    "react-loading-skeleton": "^3.4.0",
+    "react-quill-new": "^3.0.0",
+    "quill": "^2.0.2"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

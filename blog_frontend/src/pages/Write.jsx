@@ -3,7 +3,26 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { endpoints } from '../config/api';
 import apiClient from '../utils/apiClient';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
 import '../styles/write.css';
+
+const modules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+    ['link', 'image', 'blockquote', 'code-block'],
+    ['clean'],
+  ],
+};
+
+const formats = [
+  'header',
+  'bold', 'italic', 'underline', 'strike',
+  'list', 'bullet',
+  'link', 'image', 'blockquote', 'code-block',
+];
 
 export default function Write() {
   const { user } = useAuth();
@@ -13,14 +32,13 @@ export default function Write() {
 
   const [title, setTitle] = useState('');
   const [dek, setDek] = useState('');
-  const [tag, setTag] = useState(null); // tag ID (integer)
+  const [tag, setTag] = useState(null);
   const [body, setBody] = useState('');
   const [tags, setTags] = useState([]);
   const [published, setPublished] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
-  // Fetch available tags on mount
   useEffect(() => {
     const fetchTags = async () => {
       try {
@@ -39,7 +57,6 @@ export default function Write() {
     fetchTags();
   }, []);
 
-  // Load draft if editing
   useEffect(() => {
     if (draftId) {
       const fetchDraft = async () => {
@@ -64,28 +81,24 @@ export default function Write() {
 
   if (!user) return <Navigate to="/signin" replace />;
 
-  const wordCount = body.trim() ? body.trim().split(/\s+/).length : 0;
+  const wordCount = body.replace(/<[^>]+>/g, '').trim().split(/\s+/).length || 0;
   const readMins = Math.max(1, Math.round(wordCount / 200));
 
-  // ---- Build payload ----
   const buildPayload = (status) => {
     const tagIds = tag !== null && tag !== undefined ? [Number(tag)] : [];
     return {
       title: title.trim(),
       dek: dek.trim(),
-      body: body.trim(),
+      body: body,
       status: status,
       tag_ids: tagIds,
     };
   };
 
-  // ---- Save Draft ----
   const handleSaveDraft = async () => {
     setSaveMessage('');
     setLoading(true);
     const payload = buildPayload('draft');
-    console.log('Saving draft with payload:', payload);
-
     try {
       const url = draftId ? endpoints.article(draftId) : endpoints.articles;
       const method = draftId ? 'PUT' : 'POST';
@@ -97,7 +110,6 @@ export default function Write() {
       if (res.ok) {
         const data = await res.json();
         if (!draftId) {
-          // New draft created – redirect to edit mode
           navigate(`/write?draft=${data.id}`);
           setSaveMessage('Draft created! Redirecting...');
         } else {
@@ -117,26 +129,23 @@ export default function Write() {
     }
   };
 
-  // ---- Publish ----
   const handlePublish = async (e) => {
     e.preventDefault();
     setSaveMessage('');
 
     const trimmedTitle = title.trim();
-    const trimmedBody = body.trim();
+    const plainBody = body.replace(/<[^>]+>/g, '').trim();
     if (!trimmedTitle) {
       alert('Please enter a title.');
       return;
     }
-    if (!trimmedBody) {
+    if (!plainBody) {
       alert('Please write some content.');
       return;
     }
 
     setLoading(true);
     const payload = buildPayload('published');
-    console.log('Publishing payload:', payload);
-
     try {
       const url = draftId ? endpoints.article(draftId) : endpoints.articles;
       const method = draftId ? 'PUT' : 'POST';
@@ -216,12 +225,14 @@ export default function Write() {
             </select>
           </div>
 
-          <textarea
-            className="editor-body"
-            placeholder="Write your story…"
+          <ReactQuill
+            theme="snow"
             value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={18}
+            onChange={setBody}
+            modules={modules}
+            formats={formats}
+            placeholder="Write your story…"
+            className="editor-body"
           />
         </form>
       )}

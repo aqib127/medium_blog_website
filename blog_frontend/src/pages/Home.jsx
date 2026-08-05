@@ -4,6 +4,8 @@ import { endpoints } from '../config/api';
 import apiClient from '../utils/apiClient';
 import ArticleCard from '../components/ArticleCard';
 import Sidebar from '../components/Sidebar';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 import '../styles/home.css';
 
 export default function Home() {
@@ -23,10 +25,8 @@ export default function Home() {
           apiClient(endpoints.tags),
         ]);
 
-        // Check each response
         if (!articlesRes.ok) throw new Error(`Articles API error: ${articlesRes.status}`);
         if (!tagsRes.ok) throw new Error(`Tags API error: ${tagsRes.status}`);
-        // featured may be 404 – that's okay
 
         const articlesData = await articlesRes.json();
         const featuredData = featuredRes.ok ? await featuredRes.json() : null;
@@ -45,12 +45,10 @@ export default function Home() {
     fetchData();
   }, []);
 
-  // Filter articles by active tag (slug)
   const filteredArticles = activeTag
     ? articles.filter((a) => a.tags?.some((t) => t.slug === activeTag))
     : articles;
 
-  if (loading) return <div className="loading">Loading...</div>;
   if (error) return <div className="error">{error}</div>;
 
   const featuredAuthor = featured?.author;
@@ -68,7 +66,11 @@ export default function Home() {
               <Link to="/write" className="btn btn-ghost">Start writing</Link>
             </div>
           </div>
-          {featured && featuredAuthor && (
+          {loading ? (
+            <div className="hero-cover" style={{ aspectRatio: '4/5' }}>
+              <Skeleton height="100%" />
+            </div>
+          ) : featured && featuredAuthor ? (
             <Link to={`/article/${featured.id}`} className="hero-cover" style={{ background: featured.cover_color }}>
               <span className="hero-folio">No. {featured.folio || '---'}</span>
               <div className="hero-cover-text">
@@ -77,7 +79,7 @@ export default function Home() {
                 <span className="hero-cover-byline">{featuredAuthor.name}</span>
               </div>
             </Link>
-          )}
+          ) : null}
         </div>
       </section>
 
@@ -85,12 +87,16 @@ export default function Home() {
         <main className="feed-main">
           <h2 className="feed-heading">{activeTag ? `#${activeTag}` : 'Latest'}</h2>
           <div className="feed-list">
-            {filteredArticles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
-            ))}
+            {loading ? (
+              Array(3).fill().map((_, i) => <ArticleCard key={i} loading dense />)
+            ) : (
+              filteredArticles.map((article) => (
+                <ArticleCard key={article.id} article={article} />
+              ))
+            )}
           </div>
         </main>
-        <Sidebar activeTag={activeTag} onTagSelect={setActiveTag} tags={tags} />
+        <Sidebar activeTag={activeTag} onTagSelect={setActiveTag} tags={tags} loading={loading} />
       </div>
     </>
   );
