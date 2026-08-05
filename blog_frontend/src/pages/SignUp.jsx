@@ -1,38 +1,46 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import '../styles/auth.css';
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import "../styles/auth.css";
 
 export default function SignUp() {
-  const { signUp } = useAuth();
+  const { signUp, user } = useAuth();
   const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  console.log(user);
+
+  useEffect(() => {
+    if (user) {
+      navigate("/articles");
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    
+    setError("");
+
     if (!name.trim()) {
-      setError('Tell us your name.');
+      setError("Tell us your name.");
       return;
     }
-    if (!email.includes('@')) {
-      setError('Enter a valid email address.');
+    if (!email.includes("@")) {
+      setError("Enter a valid email address.");
       return;
     }
     if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+      setError("Password must be at least 6 characters.");
       return;
     }
 
     const result = await signUp(email, name, password);
     if (result.success) {
-      navigate('/');
+      navigate("/");
     } else {
-      setError(result.error || 'Registration failed. Please try again.');
+      setError(result.error || "Registration failed. Please try again.");
     }
   };
 
@@ -41,7 +49,9 @@ export default function SignUp() {
       <div className="auth-card">
         <span className="auth-mark">Blog</span>
         <h1>Create your account</h1>
-        <p className="auth-sub">Join Blog to follow writers, save stories, and publish your own.</p>
+        <p className="auth-sub">
+          Join Blog to follow writers, save stories, and publish your own.
+        </p>
 
         <form onSubmit={handleSubmit} className="auth-form">
           <label>
