@@ -1,20 +1,20 @@
+import os
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import PermissionDenied
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.shortcuts import get_object_or_404
+from django.db import IntegrityError
 from .models import User, Follow
 from .serializers import (
     UserSerializer, UserProfileUpdateSerializer,
-    RegisterSerializer, TokenResponseSerializer,
-    FollowSerializer, CustomTokenObtainPairSerializer
+    RegisterSerializer, CustomTokenObtainPairSerializer
 )
 from core.permissions import IsOwnerOrReadOnly
 from articles.serializers import ArticleSerializer
 from articles.models import Article
-import os
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -102,24 +102,61 @@ class FollowingView(generics.ListAPIView):
         return {'request': self.request}
 
 class FollowToggleView(APIView):
+    """
+    POST: Follow a user.
+    DELETE: Unfollow a user.
+    """
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, handle):
         target = get_object_or_404(User, handle=handle)
         if target == request.user:
-            return Response({'detail': 'You cannot follow yourself.'}, status=status.HTTP_400_BAD_REQUEST)
-        follow, created = Follow.objects.get_or_create(follower=request.user, followed=target)
-        if not created:
-            return Response({'detail': 'Already following.'}, status=status.HTTP_409_CONFLICT)
-        return Response({'detail': f'You are now following @{target.handle}.'}, status=status.HTTP_201_CREATED)
+            return Response(
+                {'detail': 'You cannot follow yourself.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            follow, created = Follow.objects.get_or_create(
+                follower=request.user,
+                followed=target
+            )
+            if not created:
+                # Already following – return 409 Conflict to let frontend sync
+                return Response(
+                    {'detail': 'Already following.'},
+                    status=status.HTTP_409_CONFLICT
+                )
+            return Response(
+                {'detail': f'You are now following @{target.handle}.'},
+                status=status.HTTP_201_CREATED
+            )
+        except IntegrityError:
+            # Race condition – already exists
+            return Response(
+                {'detail': 'Already following.'},
+                status=status.HTTP_409_CONFLICT
+            )
 
     def delete(self, request, handle):
         target = get_object_or_404(User, handle=handle)
+        if target == request.user:
+            return Response(
+                {'detail': 'You cannot unfollow yourself.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         follow = Follow.objects.filter(follower=request.user, followed=target).first()
         if not follow:
-            return Response({'detail': 'Not following.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'detail': 'Not following.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
         follow.delete()
-        return Response({'detail': f'Unfollowed @{target.handle}.'}, status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            {'detail': f'Unfollowed @{target.handle}.'},
+            status=status.HTTP_204_NO_CONTENT
+        )
 
 class ProfileUpdateView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -153,7 +190,7 @@ class AvatarUpdateView(APIView):
         if user != request.user:
             raise PermissionDenied('You can only update your own avatar.')
 
-        # Handle removal via JSON: { "avatar": null }
+        # Handle removal via JSON
         if request.content_type == 'application/json':
             data = request.data
             if data.get('avatar') is None:
@@ -163,11 +200,17 @@ class AvatarUpdateView(APIView):
                     user.avatar = None
                     user.save(update_fields=['avatar'])
                 return Response({'avatar_url': None})
-            return Response({'detail': 'Invalid JSON payload.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Invalid JSON payload.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # Otherwise handle file upload
+        # File upload
         if 'avatar' not in request.FILES:
-            return Response({'detail': 'No avatar file provided.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'No avatar file provided.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         user.avatar = request.FILES['avatar']
         user.save()

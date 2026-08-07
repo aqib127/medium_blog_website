@@ -16,38 +16,58 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
 
+  const fetchArticles = async (tagSlug = null) => {
+    setLoading(true);
+    try {
+      let url = endpoints.articles;
+      if (tagSlug) {
+        // ✅ Correct filter parameter as per backend
+        url += `?tags__slug=${tagSlug}`;
+        console.log(`[Home] Fetching articles with tag slug: ${tagSlug} -> ${url}`);
+      } else {
+        console.log(`[Home] Fetching all articles: ${url}`);
+      }
+      const res = await apiClient(url);
+      if (!res.ok) throw new Error(`Articles API error: ${res.status}`);
+      const data = await res.json();
+      const articleList = data.results || data;
+      console.log(`[Home] Received ${articleList.length} articles`);
+      setArticles(articleList);
+    } catch (err) {
+      console.error('[Home] Error fetching articles:', err);
+      setError(err.message || 'Failed to load articles.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchMeta = async () => {
       try {
-        const [articlesRes, featuredRes, tagsRes] = await Promise.all([
-          apiClient(endpoints.articles),
+        const [featuredRes, tagsRes] = await Promise.all([
           apiClient(endpoints.featured),
           apiClient(endpoints.tags),
         ]);
-
-        if (!articlesRes.ok) throw new Error(`Articles API error: ${articlesRes.status}`);
-        if (!tagsRes.ok) throw new Error(`Tags API error: ${tagsRes.status}`);
-
-        const articlesData = await articlesRes.json();
         const featuredData = featuredRes.ok ? await featuredRes.json() : null;
-        const tagsData = await tagsRes.json();
-
-        setArticles(articlesData.results || articlesData);
+        const tagsData = tagsRes.ok ? await tagsRes.json() : [];
         setFeatured(featuredData);
         setTags(tagsData);
+        console.log(`[Home] Loaded ${tagsData.length} tags`);
       } catch (err) {
-        console.error('Error loading home:', err);
-        setError(err.message || 'Failed to load content. Please refresh.');
-      } finally {
-        setLoading(false);
+        console.error('[Home] Error fetching meta data:', err);
       }
     };
-    fetchData();
+    fetchMeta();
   }, []);
 
-  const filteredArticles = activeTag
-    ? articles.filter((a) => a.tags?.some((t) => t.slug === activeTag))
-    : articles;
+  useEffect(() => {
+    fetchArticles(activeTag);
+  }, [activeTag]);
+
+  const handleTagSelect = (tagSlug) => {
+    console.log(`[Home] Tag selected: ${tagSlug}`);
+    setActiveTag(tagSlug);
+  };
 
   if (error) return <div className="error">{error}</div>;
 
@@ -62,7 +82,7 @@ export default function Home() {
             <h1>Essays and ideas <em>worth</em> turning the page for.</h1>
             <p>Blog is a place for writing that rewards a second look — long-form journalism, craft essays, and arguments that hold up on the reread.</p>
             <div className="hero-actions">
-              <Link to="/signup" className="btn btn-primary">Start reading</Link>
+              <Link to="/articles" className="btn btn-primary">Start reading</Link>
               <Link to="/write" className="btn btn-ghost">Start writing</Link>
             </div>
           </div>
@@ -89,14 +109,18 @@ export default function Home() {
           <div className="feed-list">
             {loading ? (
               Array(3).fill().map((_, i) => <ArticleCard key={i} loading dense />)
+            ) : articles.length === 0 ? (
+              <p style={{ padding: '40px 0', color: 'var(--ink-soft)', textAlign: 'center' }}>
+                No articles found for this tag.
+              </p>
             ) : (
-              filteredArticles.map((article) => (
+              articles.map((article) => (
                 <ArticleCard key={article.id} article={article} />
               ))
             )}
           </div>
         </main>
-        <Sidebar activeTag={activeTag} onTagSelect={setActiveTag} tags={tags} loading={loading} />
+        <Sidebar activeTag={activeTag} onTagSelect={handleTagSelect} tags={tags} loading={loading} />
       </div>
     </>
   );

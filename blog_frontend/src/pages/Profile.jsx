@@ -21,7 +21,7 @@ const TABS = [
 
 export default function Profile() {
   const { handle } = useParams();
-  const cleanHandle = handle?.replace(/^@/, '');
+  const cleanHandle = handle?.replace(/^@/, '') || '';
   const { user } = useAuth();
 
   const [profileUser, setProfileUser] = useState(null);
@@ -36,63 +36,67 @@ export default function Profile() {
 
   const isOwnProfile = !!(user && profileUser && user.handle === profileUser.handle);
 
-  useEffect(() => {
-    let cancelled = false;
+  const fetchProfile = async () => {
+    if (!cleanHandle) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const [userRes, storiesRes, followersRes, followingRes] = await Promise.all([
+        apiClient(endpoints.users(cleanHandle)),
+        apiClient(endpoints.userStories(cleanHandle)),
+        apiClient(endpoints.userFollowers(cleanHandle)),
+        apiClient(endpoints.userFollowing(cleanHandle)),
+      ]);
 
-    const fetchProfile = async () => {
-      setLoading(true);
-      try {
-        const [userRes, storiesRes, followersRes, followingRes] = await Promise.all([
-          apiClient(endpoints.users(cleanHandle)),
-          apiClient(endpoints.userStories(cleanHandle)),
-          apiClient(endpoints.userFollowers(cleanHandle)),
-          apiClient(endpoints.userFollowing(cleanHandle)),
-        ]);
+      if (!userRes.ok) throw new Error(`User fetch failed: ${userRes.status}`);
 
-        if (!userRes.ok) throw new Error('User not found');
+      const userData = await userRes.json();
+      const storiesData = storiesRes.ok ? await storiesRes.json() : [];
+      const followersData = followersRes.ok ? await followersRes.json() : [];
+      const followingData = followingRes.ok ? await followingRes.json() : [];
 
-        const userData = await userRes.json();
-        const storiesData = storiesRes.ok ? await storiesRes.json() : [];
-        const followersData = followersRes.ok ? await followersRes.json() : [];
-        const followingData = followingRes.ok ? await followingRes.json() : [];
+      setProfileUser(userData);
+      setStories(storiesData.results || storiesData);
+      setFollowers(followersData.results || followersData);
+      setFollowing(followingData.results || followingData);
 
-        if (cancelled) return;
-
-        setProfileUser(userData);
-        setStories(storiesData.results || storiesData);
-        setFollowers(followersData.results || followersData);
-        setFollowing(followingData.results || followingData);
-
-        if (user) {
-          const followingList = followingData.results || followingData;
-          setIsFollowing(followingList.some((u) => u.id === user.id));
-        }
-
-        if (user && user.handle === cleanHandle) {
-          const [bookmarksRes, draftsRes] = await Promise.all([
-            apiClient(endpoints.bookmarks),
-            apiClient(`${endpoints.articles}?status=draft`),
-          ]);
-          const bookmarksData = bookmarksRes.ok ? await bookmarksRes.json() : [];
-          const draftsData = draftsRes.ok ? await draftsRes.json() : [];
-          if (cancelled) return;
-          const bookmarkList = bookmarksData.results || bookmarksData;
-          setReadingList(bookmarkList.map((b) => b.article));
-          setDrafts(draftsData.results || draftsData);
-        } else {
-          setReadingList([]);
-          setDrafts([]);
-        }
-      } catch (err) {
-        console.error('Error loading profile:', err);
-        if (!cancelled) setProfileUser(null);
-      } finally {
-        if (!cancelled) setLoading(false);
+      // ✅ CORRECT: determine if the authenticated user is in the followers list
+      if (user) {
+        const followersList = followersData.results || followersData;
+        const isUserFollowing = followersList.some((u) => u.id === user.id);
+        console.log(`✅ Follow status for ${cleanHandle}: ${isUserFollowing}`);
+        setIsFollowing(isUserFollowing);
+      } else {
+        console.log('⚠️ No authenticated user');
+        setIsFollowing(false);
       }
-    };
 
+      if (user && user.handle === cleanHandle) {
+        const [bookmarksRes, draftsRes] = await Promise.all([
+          apiClient(endpoints.bookmarks),
+          apiClient(`${endpoints.articles}?status=draft`),
+        ]);
+        const bookmarksData = bookmarksRes.ok ? await bookmarksRes.json() : [];
+        const draftsData = draftsRes.ok ? await draftsRes.json() : [];
+        const bookmarkList = bookmarksData.results || bookmarksData;
+        setReadingList(bookmarkList.map((b) => b.article));
+        setDrafts(draftsData.results || draftsData);
+      } else {
+        setReadingList([]);
+        setDrafts([]);
+      }
+    } catch (err) {
+      console.error('Error loading profile:', err);
+      setProfileUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProfile();
-    return () => { cancelled = true; };
   }, [cleanHandle, user]);
 
   useEffect(() => {
@@ -104,19 +108,38 @@ export default function Profile() {
       window.location.href = '/signin';
       return;
     }
+    if (!cleanHandle) {
+      console.error('No handle provided for follow action');
+      return;
+    }
+
+    const method = isFollowing ? 'DELETE' : 'POST';
+    const url = endpoints.userFollow(cleanHandle);
+    console.log(`🖱️ Sending ${method} to ${url}`);
+
     try {
-      const res = await apiClient(endpoints.userFollow(cleanHandle), {
-        method: isFollowing ? 'DELETE' : 'POST',
-      });
-      if (res.ok) {
-        setIsFollowing(!isFollowing);
-        setProfileUser((prev) => ({
-          ...prev,
-          followers_count: isFollowing ? prev.followers_count - 1 : prev.followers_count + 1,
-        }));
+      const response = await apiClient(url, { method });
+      console.log(`📡 Response status: ${response.status}`);
+
+      if (response.status === 409) {
+        console.warn('⚠️ 409 – already following, syncing');
+        setIsFollowing(true);
+        await fetchProfile();
+        return;
       }
-    } catch (err) {
-      console.error('Follow error:', err);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      // Success – immediately toggle local state for instant UI update
+      setIsFollowing(!isFollowing);
+      // Then refetch to sync counts and confirm the new state
+      await fetchProfile();
+    } catch (error) {
+      console.error('❌ Follow error:', error);
+      alert(`Failed to update follow status: ${error.message}`);
     }
   };
 
@@ -273,6 +296,7 @@ export default function Profile() {
             <button
               className={`btn ${isFollowing ? 'btn-ghost' : 'btn-primary'} profile-sidebar-action`}
               onClick={handleFollow}
+              id="follow-button-test"
             >
               {isFollowing ? 'Following' : 'Follow'}
             </button>

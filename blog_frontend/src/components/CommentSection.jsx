@@ -82,7 +82,7 @@ export default function CommentSection({ articleId, initialCount = 0 }) {
 
   return (
     <section className="comments">
-      <h3 className="comments-heading">Responses ({comments.length + initialCount})</h3>
+      <h3 className="comments-heading">Responses ({ initialCount})</h3>
 
       {user ? (
         <form className="comment-form" onSubmit={handleSubmit}>

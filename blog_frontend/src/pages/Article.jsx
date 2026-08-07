@@ -117,31 +117,31 @@ export default function Article() {
                 {article.read_mins} min read · {new Date(article.published_at || article.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </span>
             </div>
-            {user && user.handle !== author.handle && (
+            {/* {user && user.handle !== author.handle && (
               <button
                 className={`btn ${following ? 'btn-ghost' : 'btn-primary'} reader-follow`}
                 onClick={() => setFollowing((f) => !f)}
               >
                 {following ? 'Following' : 'Follow'}
               </button>
-            )}
+            )} */}
           </div>
 
-          <div className="reader-actions">
-            <ClapButton articleId={article.id} initialClaps={article.claps_count} initialClapped={article.is_clapped} />
-            <SaveButton articleId={article.id} />
-            <span className="reader-comment-count">💬 {article.comments_count} responses</span>
-          </div>
         </header>
 
         <div className="reader-body" ref={bodyRef}>
           <div dangerouslySetInnerHTML={{ __html: article.body }} />
         </div>
 
-        <div className="reader-actions reader-actions--footer">
+          <div className="reader-actions">
+            <ClapButton articleId={article.id} initialClaps={article.claps_count} initialClapped={article.is_clapped} />
+            <SaveButton articleId={article.id} />
+            <span className="reader-comment-count">💬 {article.comments_count} responses</span>
+          </div>
+        {/* <div className="reader-actions reader-actions--footer">
           <ClapButton articleId={article.id} initialClaps={article.claps_count} initialClapped={article.is_clapped} />
           <SaveButton articleId={article.id} />
-        </div>
+        </div> */}
 
         <CommentSection articleId={article.id} initialCount={article.comments_count} />
       </div>
