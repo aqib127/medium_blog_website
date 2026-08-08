@@ -1,66 +1,44 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import ArticleCard from '../components/ArticleCard';
 import { endpoints } from '../config/api';
 import apiClient from '../utils/apiClient';
-import ArticleCard from '../components/ArticleCard';
-import Skeleton from 'react-loading-skeleton';
-import 'react-loading-skeleton/dist/skeleton.css';
-import '../styles/saved.css';
 
 export default function SavedArticles() {
   const { user } = useAuth();
-  const [savedArticles, setSavedArticles] = useState([]);
+  const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    const fetchBookmarks = async () => {
+    const fetchSaved = async () => {
+      if (!user) return setLoading(false);
       try {
         const res = await apiClient(endpoints.bookmarks);
-        const data = await res.json();
-        const bookmarks = data.results || data;
-        setSavedArticles(bookmarks.map((b) => b.article));
+        if (res.ok) {
+          const data = await res.json();
+          // Bookmarks return objects, parse them into articles.
+          setArticles(data.results ? data.results.map(b => b.article) : data.map(b => b.article));
+        }
       } catch (err) {
-        console.error('Error fetching bookmarks:', err);
+        console.error("Failed to fetch saved articles", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchBookmarks();
+    fetchSaved();
   }, [user]);
 
-  if (!user) {
-    return (
-      <div className="saved-page container">
-        <h1>Saved stories</h1>
-        <p className="saved-empty">Please <a href="/signin">sign in</a> to view your saved stories.</p>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="saved-page container">
-        <h1><Skeleton width={200} /></h1>
-        {[1,2,3].map(i => <ArticleCard key={i} loading />)}
-      </div>
-    );
-  }
+  if (!user) return <div className="text-center py-10">Please sign in to view your saved articles.</div>;
 
   return (
-    <div className="saved-page container">
-      <h1>Saved stories</h1>
-      {savedArticles.length === 0 ? (
-        <p className="saved-empty">You haven't saved any stories yet.</p>
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6">Your Reading List</h1>
+      {loading ? (
+        <p className="text-gray-400">Loading...</p>
+      ) : articles.length === 0 ? (
+        <p className="text-gray-500">You haven't saved any articles yet.</p>
       ) : (
-        <div className="saved-list">
-          {savedArticles.map((a) => (
-            <ArticleCard key={a.id} article={a} />
-          ))}
-        </div>
+        articles.map(article => <ArticleCard key={article.id} article={article} />)
       )}
     </div>
   );

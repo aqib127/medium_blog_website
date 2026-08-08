@@ -164,3 +164,40 @@ def get_all_tags():
     """Get list of all tags."""
     tags = Tag.objects.all()
     return [{'name': t.name, 'slug': t.slug} for t in tags]
+
+def get_website_info():
+    """Return a comprehensive description of the website and its features."""
+    return {
+        "name": "Blog - A Medium-style Writing Platform",
+        "description": "Blog is a platform for writers and readers to share long-form articles and ideas.",
+        "features": {
+            "authentication": "Users can sign up, sign in, and sign out. Authentication uses JWT tokens.",
+            "profiles": "Each user has a profile with bio, avatar, and social links. Users can edit their profile.",
+            "articles": "Users can write, edit, publish, and delete articles. Articles support rich text (Quill), tags, and a dek.",
+            "drafts": "Articles can be saved as drafts before publishing.",
+            "reading_list": "Users can bookmark articles to save them for later.",
+            "claps": "Readers can clap for articles (like/unlike) - one clap per user per article.",
+            "comments": "Users can comment on articles. Comments are shown below the article.",
+            "following": "Users can follow other users. Followers count is displayed on profiles.",
+            "tag_filtering": "Articles are tagged. Users can filter articles by clicking a tag.",
+            "search": "Users can search articles by title, dek, or body content.",
+            "chatbot": "This AI assistant can answer questions about the website and its features.",
+            "notifications": "Users receive notifications for follows, comments, claps, etc. (if implemented)."
+        },
+        "how_to": {
+            "write_article": "Go to the Write page (top navigation) and fill in the title, dek, content, and select a tag. Click 'Publish' to publish or 'Save draft' to save as draft.",
+            "edit_article": "If you have published or drafted articles, you can edit them from your profile page or from the drafts page.",
+            "save_article": "Click the Save button on an article to add it to your reading list.",
+            "follow_user": "On a user's profile page, click the Follow button.",
+            "edit_profile": "Go to your profile page and click 'Edit profile' or go to Settings.",
+            "view_saved": "Click 'Saved' in the dropdown menu under your avatar.",
+            "publish_draft": "Go to your drafts page, click the draft to open the editor, then click Publish.",
+            "delete_article": "In your profile, under Stories or Drafts, find the article and click Delete.",
+            "search": "Use the search bar in the navigation to search for articles by title, topic, or writer.",
+            "bookmark": "Click the Save button on any article to bookmark it. Find saved articles under 'Saved' in the dropdown.",
+            "clap": "Click the clap button (hands icon) on an article to show appreciation. You can only clap once per article.",
+            "comment": "Scroll to the bottom of an article, type your response in the text area, and click Respond.",
+            "signup": "Click 'Get started' on the homepage or go to the Sign Up page to create an account.",
+            "signin": "Click 'Sign in' in the navigation to log in with your email and password."
+        }
+    }

@@ -1,97 +1,85 @@
-import { Link } from "react-router-dom";
-import { endpoints } from "../config/api";
-import apiClient from "../utils/apiClient";
-import { useEffect, useState } from "react";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
-import "../styles/sidebar.css";
+import React, { useEffect, useState } from 'react';
+import { endpoints } from '../config/api';
+import apiClient from '../utils/apiClient';
 
-export default function Sidebar({ activeTag, onTagSelect, tags, loading = false }) {
-  const [trending, setTrending] = useState([]);
+/**
+ * FIX: This component used to ignore the props passed by Home.jsx
+ * (tags / activeTag / onTagSelect / loading) and instead fetched its own
+ * tags and *navigated* to /tag/:slug on click. That meant clicking a tag
+ * on the homepage sent the user to TagPage (which has no Sidebar and no
+ * active-tag highlight), instead of filtering the feed in place.
+ *
+ * Now Sidebar is a controlled component: if the parent passes `tags`,
+ * `activeTag`, and `onTagSelect`, it uses those directly and simply calls
+ * back on click — no navigation, no local refetch, no state duplication.
+ * If used standalone without those props, it still works by fetching its
+ * own tag list and calling onTagSelect (a no-op fallback logs a warning).
+ */
+const Sidebar = ({ tags: tagsProp, activeTag = null, onTagSelect, loading: loadingProp }) => {
+  const [fetchedTags, setFetchedTags] = useState([]);
+  const [fetchLoading, setFetchLoading] = useState(!tagsProp);
+
+  const usingControlledTags = Array.isArray(tagsProp);
+  const tags = usingControlledTags ? tagsProp : fetchedTags;
+  const loading = usingControlledTags ? !!loadingProp : fetchLoading;
 
   useEffect(() => {
-    const fetchTrending = async () => {
+    if (usingControlledTags) return; // parent is managing tags, nothing to fetch
+    const fetchTags = async () => {
       try {
-        const res = await apiClient(endpoints.trending);
-        const data = await res.json();
-        setTrending(data);
+        const res = await apiClient(endpoints.tags);
+        if (res.ok) {
+          const data = await res.json();
+          setFetchedTags(data.results || data);
+        }
       } catch (err) {
-        console.error('Error fetching trending:', err);
+        console.error('Failed to fetch tags', err);
+      } finally {
+        setFetchLoading(false);
       }
     };
-    fetchTrending();
-  }, []);
+    fetchTags();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usingControlledTags]);
 
-  if (loading) {
-    return (
-      <aside className="sidebar">
-        <div className="sidebar-block">
-          <h4 className="sidebar-heading"><Skeleton width={120} /></h4>
-          <div className="tag-filters">
-            <Skeleton width={60} height={30} />
-            <Skeleton width={80} height={30} />
-            <Skeleton width={70} height={30} />
-          </div>
-        </div>
-        <div className="sidebar-block">
-          <h4 className="sidebar-heading"><Skeleton width={100} /></h4>
-          <ol className="trending-list">
-            {[1,2,3].map(i => (
-              <li key={i}><Skeleton count={2} /></li>
-            ))}
-          </ol>
-        </div>
-      </aside>
-    );
-  }
+  const handleTagClick = (slug) => {
+    // If the clicked tag is already active, clicking again clears the filter.
+    const nextTag = activeTag === slug ? null : slug;
+    if (typeof onTagSelect === 'function') {
+      onTagSelect(nextTag);
+    } else {
+      console.warn('Sidebar: no onTagSelect handler provided.');
+    }
+  };
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-block">
-        <h4 className="sidebar-heading">Browse by topic</h4>
-        <div className="tag-filters">
-          <Link
-            to="/"
-            className={`tag-filter ${!activeTag ? "tag-filter--active" : ""}`}
-            onClick={() => onTagSelect(null)}
-          >
-            All
-          </Link>
-          {tags.map((tag) => (
-            <Link
-              key={tag.id}
-              to={`/tag/${tag.slug}`}
-              className={`tag-filter ${activeTag === tag.slug ? "tag-filter--active" : ""}`}
-              onClick={() => onTagSelect(tag.slug)}
-            >
-              {tag.name}
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      <div className="sidebar-block">
-        <h4 className="sidebar-heading">Staff picks</h4>
-        <ol className="trending-list">
-          {trending.map((article, i) => {
-            const author = article.author;
-            if (!author) return null;
-            return (
-              <li key={article.id}>
-                <span className="trending-index">{String(i + 1).padStart(2, "0")}</span>
-                <div>
-                  <Link to={`/@${author.handle}`} className="trending-byline">
-                    {author.name}
-                  </Link>
-                  <Link to={`/article/${article.id}`} className="trending-title">
-                    {article.title}
-                  </Link>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+    <aside className="feed-sidebar">
+      <div>
+        <h3 className="text-sm font-bold text-gray-800 mb-4">Browse by topic</h3>
+        {loading ? (
+          <div className="flex flex-wrap gap-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-8 w-16 bg-gray-200 rounded-full animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="sidebar-button-group">
+            {tags.map((tag) => (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => handleTagClick(tag.slug)}
+                aria-pressed={activeTag === tag.slug}
+                className="sidebar-tag-button"
+              >
+                {tag.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </aside>
   );
-}
+};
+
+export default Sidebar;

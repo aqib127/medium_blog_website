@@ -11,7 +11,7 @@ const modules = {
   toolbar: [
     [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
     ['bold', 'italic', 'underline', 'strike'],
-    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
     ['link', 'image', 'blockquote', 'code-block'],
     ['clean'],
   ],
@@ -39,15 +39,19 @@ export default function Write() {
   const [loading, setLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [existingImageUrl, setExistingImageUrl] = useState(null);
+
   useEffect(() => {
     const fetchTags = async () => {
       try {
         const res = await apiClient(endpoints.tags);
         if (!res.ok) throw new Error('Failed to fetch tags');
         const data = await res.json();
-        setTags(data);
-        if (data.length > 0) {
-          setTag(data[0].id);
+        const tagList = data.results || data;
+        setTags(tagList);
+        if (tagList.length > 0 && tag === null) {
+          setTag(tagList[0].id);
         }
       } catch (err) {
         console.error('Error fetching tags:', err);
@@ -55,6 +59,7 @@ export default function Write() {
       }
     };
     fetchTags();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -70,6 +75,10 @@ export default function Write() {
             setTag(data.tags[0].id);
           }
           setBody(data.body || '');
+          // Show the already-saved cover image (from the read serializer's
+          // image_url) so re-opening a draft doesn't look like the image
+          // was lost — it's still there until a new file is chosen.
+          setExistingImageUrl(data.image_url || null);
         } catch (err) {
           console.error('Error loading draft:', err);
           alert('Could not load draft.');
@@ -84,31 +93,51 @@ export default function Write() {
   const wordCount = body.replace(/<[^>]+>/g, '').trim().split(/\s+/).length || 0;
   const readMins = Math.max(1, Math.round(wordCount / 200));
 
-  const buildPayload = (status) => {
-    const tagIds = tag !== null && tag !== undefined ? [Number(tag)] : [];
-    return {
-      title: title.trim(),
-      dek: dek.trim(),
-      body: body,
-      status: status,
-      tag_ids: tagIds,
-    };
+  const handleImageChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedImage(e.target.files[0]);
+    }
+  };
+
+  const buildFormData = (status) => {
+    const formData = new FormData();
+    formData.append('title', title.trim());
+    formData.append('dek', dek.trim());
+    formData.append('body', body);
+    formData.append('status', status);
+
+    // FIX: DRF's ListField reads multipart values via QueryDict.getlist(),
+    // so tag ids must be appended as separate form fields — sending
+    // JSON.stringify([3]) as one string field fails ListField validation.
+    if (tag !== null && tag !== undefined) {
+      formData.append('tag_ids', Number(tag));
+    }
+
+    // Only attach the image field when a NEW file was picked. If we
+    // omit it entirely on update, the backend correctly leaves the
+    // existing saved image untouched.
+    if (selectedImage) {
+      formData.append('image', selectedImage);
+    }
+    return formData;
   };
 
   const handleSaveDraft = async () => {
     setSaveMessage('');
     setLoading(true);
-    const payload = buildPayload('draft');
+    const formData = buildFormData('draft');
     try {
       const url = draftId ? endpoints.article(draftId) : endpoints.articles;
       const method = draftId ? 'PUT' : 'POST';
       const res = await apiClient(url, {
         method,
-        body: JSON.stringify(payload),
+        body: formData,
       });
 
       if (res.ok) {
         const data = await res.json();
+        setExistingImageUrl(data.image_url || null);
+        setSelectedImage(null);
         if (!draftId) {
           navigate(`/write?draft=${data.id}`);
           setSaveMessage('Draft created! Redirecting...');
@@ -145,13 +174,13 @@ export default function Write() {
     }
 
     setLoading(true);
-    const payload = buildPayload('published');
+    const formData = buildFormData('published');
     try {
       const url = draftId ? endpoints.article(draftId) : endpoints.articles;
       const method = draftId ? 'PUT' : 'POST';
       const res = await apiClient(url, {
         method,
-        body: JSON.stringify(payload),
+        body: formData,
       });
 
       if (res.ok) {
@@ -207,6 +236,32 @@ export default function Write() {
             value={dek}
             onChange={(e) => setDek(e.target.value)}
           />
+
+          <div className="editor-tag-row">
+            <span>Cover Image</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="text-sm cursor-pointer"
+              />
+              {selectedImage ? (
+                <div className="flex items-center gap-2 text-xs text-green-600">
+                  ✓ {selectedImage.name}
+                  <button
+                    type="button"
+                    className="text-red-500 hover:underline"
+                    onClick={() => setSelectedImage(null)}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : existingImageUrl ? (
+                <span className="text-xs text-gray-500">Current image set — pick a new file to replace it</span>
+              ) : null}
+            </div>
+          </div>
 
           <div className="editor-tag-row">
             <span>Topic</span>

@@ -17,7 +17,7 @@ from users.models import User
 logger = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------
-# Tool definitions (12 functions)
+# Tool definitions (12 functions + 1 for website info)
 # --------------------------------------------------------------------
 TOOLS = [
     {
@@ -128,6 +128,11 @@ TOOLS = [
         "name": "get_all_tags",
         "description": "Get list of all tags.",
         "input_schema": {"type": "object", "properties": {}}
+    },
+    {
+        "name": "get_website_info",
+        "description": "Return a comprehensive description of the website, its features, and how to use them.",
+        "input_schema": {"type": "object", "properties": {}}
     }
 ]
 
@@ -144,6 +149,7 @@ TOOL_MAP = {
     'get_articles_by_tag': utils.get_articles_by_tag,
     'search_users': utils.search_users,
     'get_all_tags': utils.get_all_tags,
+    'get_website_info': utils.get_website_info,
 }
 
 # --------------------------------------------------------------------
@@ -166,7 +172,6 @@ if ANTHROPIC_API_KEY and not USE_MOCK:
 
 if USE_MOCK:
     logger.warning("Chatbot running in MOCK mode.")
-
 
 def get_mock_response(message, user=None):
     msg = message.lower().strip()
@@ -342,6 +347,35 @@ def get_mock_response(message, user=None):
         else:
             return "You need to be signed in to see your bookmarks. Please log in."
 
+    # --- Website info (how to questions) ---
+    if re.search(r'how do (i|you|we) (write|create|publish|edit|save|follow|unfollow|comment|clap|bookmark|draft|delete|search|sign|profile)', msg):
+        info = utils.get_website_info()
+        # Return a relevant part of the info
+        if 'write' in msg or 'create article' in msg:
+            return info['how_to'].get('write_article', 'Go to the Write page.')
+        if 'save article' in msg or 'bookmark' in msg:
+            return info['how_to'].get('save_article', 'Click the Save button on the article page.')
+        if 'follow' in msg:
+            return info['how_to'].get('follow_user', 'Go to the user profile and click Follow.')
+        if 'edit profile' in msg:
+            return info['how_to'].get('edit_profile', 'Go to your profile and click Edit profile.')
+        if 'publish' in msg or 'draft' in msg:
+            return info['how_to'].get('publish_draft', 'Go to drafts, click the draft, then click Publish.')
+        if 'delete' in msg:
+            return info['how_to'].get('delete_article', 'In your profile, find the article and click Delete.')
+        if 'search' in msg:
+            return info['how_to'].get('search', 'Use the search bar in the navigation.')
+        if 'comment' in msg:
+            return info['how_to'].get('comment', 'Scroll to the bottom of an article, type your response, and click Respond.')
+        if 'clap' in msg:
+            return info['how_to'].get('clap', 'Click the clap button on an article.')
+        if 'sign' in msg:
+            return info['how_to'].get('signup', 'Click "Get started" to sign up, or "Sign in" to log in.')
+        if 'profile' in msg:
+            return info['how_to'].get('edit_profile', 'Go to your profile and click Edit profile.')
+        # Fallback: return general info
+        return "Here is general information about the website:\n" + json.dumps(info, indent=2)
+
     return ("I'm sorry, I don't have an answer for that. You can ask me about:\n"
             "- Latest articles\n"
             "- Trending articles\n"
@@ -350,8 +384,8 @@ def get_mock_response(message, user=None):
             "- Tags\n"
             "- User profile @handle\n"
             "- Bookmarks (if signed in)\n"
-            "- How many articles/tags/users there are")
-
+            "- How many articles/tags/users there are\n"
+            "- How to write, edit, save, follow, comment, clap, etc.")
 
 def coerce_args(tool_name, args):
     if tool_name == 'get_article':
@@ -373,7 +407,6 @@ def coerce_args(tool_name, args):
             except (ValueError, TypeError):
                 args['limit'] = 5
     return args
-
 
 class ChatbotView(APIView):
     permission_classes = [AllowAny]
@@ -403,11 +436,14 @@ class ChatbotView(APIView):
                 })
 
             system_prompt = (
-                "You are a helpful assistant for a Medium‑like blog website. "
+                "You are a helpful assistant for a Medium‑like blog website called 'Blog'. "
                 "You MUST use the provided tools to retrieve real data from the database. "
                 "DO NOT guess or make up answers. If a user asks for articles, authors, tags, bookmarks, etc., "
                 "you MUST call the appropriate tool. Only after receiving the tool result, you can answer the user. "
-                "If a user asks about something that requires authentication (like bookmarks), inform them politely."
+                "If a user asks about something that requires authentication (like bookmarks), inform them politely. "
+                "Additionally, you can answer questions about how the website works, its features, and how to use them. "
+                "Use the 'get_website_info' tool to get a description of the website features and instructions on how to perform common tasks. "
+                "Keep your answers concise and helpful. Do not expose private information of other users."
             )
 
             messages = []

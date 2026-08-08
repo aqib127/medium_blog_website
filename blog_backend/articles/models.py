@@ -39,6 +39,9 @@ class Article(BaseModel):
     claps_count = models.PositiveIntegerField(default=0)
     comments_count = models.PositiveIntegerField(default=0)
     view_count = models.PositiveIntegerField(default=0)
+    
+    # NEW: Added primary cover image to be used in the ArticleCard and ArticleDetail views
+    image = models.ImageField(upload_to='article_covers/', blank=True, null=True)
 
     tags = models.ManyToManyField(Tag, through='ArticleTag', related_name='articles')
 

@@ -119,6 +119,35 @@ img {
   object-fit: cover;
 }
 
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Ensure all image containers behave properly */
+.object-cover {
+  object-fit: cover;
+}
+/* Base styles for SafeImage — parent container controls exact size via its
+   own CSS (e.g. .article-card-image-link), this just fills that container. */
+.safe-image,
+.safe-image-fallback {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.safe-image {
+  object-fit: cover;
+}
+
+.safe-image-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.001ms !important;

@@ -7,12 +7,13 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import "../styles/comments.css";
 
-export default function CommentSection({ articleId, initialCount = 0 }) {
+export default function CommentSection({ articleId, initialCount = 0, onCommentAdded }) {
   const { user } = useAuth();
   const [comments, setComments] = useState([]);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [count, setCount] = useState(initialCount);
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -20,7 +21,8 @@ export default function CommentSection({ articleId, initialCount = 0 }) {
       try {
         const res = await apiClient(endpoints.commentList(articleId));
         const data = await res.json();
-        setComments(data.results || data);
+        const commentsData = data.results || data;
+        setComments(commentsData);
       } catch (err) {
         console.error('Error fetching comments:', err);
       } finally {
@@ -45,10 +47,18 @@ export default function CommentSection({ articleId, initialCount = 0 }) {
       if (res.ok) {
         const newComment = await res.json();
         setComments(prev => [newComment, ...prev]);
+        const newCount = count + 1;
+        setCount(newCount);
+        if (onCommentAdded) onCommentAdded(newCount);
         setDraft("");
+      } else {
+        const errorData = await res.json();
+        console.error('Comment submission error:', errorData);
+        alert('Failed to post comment. Please try again.');
       }
     } catch (err) {
       console.error('Error posting comment:', err);
+      alert('Network error. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -82,7 +92,7 @@ export default function CommentSection({ articleId, initialCount = 0 }) {
 
   return (
     <section className="comments">
-      <h3 className="comments-heading">Responses ({ initialCount})</h3>
+      <h3 className="comments-heading">Responses ({count})</h3>
 
       {user ? (
         <form className="comment-form" onSubmit={handleSubmit}>

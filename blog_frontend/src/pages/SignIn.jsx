@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import '../styles/auth.css';
 
 export default function SignIn() {
-  const { signIn } = useAuth();
   const navigate = useNavigate();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -15,8 +15,10 @@ export default function SignIn() {
     e.preventDefault();
     setError('');
     setLoading(true);
+
     const result = await signIn(email, password);
     setLoading(false);
+
     if (result.success) {
       navigate('/');
     } else {
@@ -28,8 +30,8 @@ export default function SignIn() {
     <div className="auth-page">
       <div className="auth-card">
         <span className="auth-mark">Blog</span>
-        <h1>Welcome back</h1>
-        <p className="auth-sub">Sign in to keep reading and pick up where you left off.</p>
+        <h1>Sign in to your account</h1>
+        <p className="auth-sub">Welcome back — pick up where you left off.</p>
 
         <form onSubmit={handleSubmit} className="auth-form">
           <label>
@@ -48,7 +50,7 @@ export default function SignIn() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Your password"
               required
             />
           </label>

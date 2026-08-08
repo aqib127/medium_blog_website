@@ -7,6 +7,7 @@ import ClapButton from '../components/ClapButton';
 import CommentSection from '../components/CommentSection';
 import SaveButton from '../components/SaveButton';
 import Avatar from '../components/Avatar';
+import SafeImage from '../components/SafeImage';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import '../styles/article.css';
@@ -15,27 +16,27 @@ export default function Article() {
   const { id } = useParams();
   const [article, setArticle] = useState(null);
   const [progress, setProgress] = useState(0);
-  const [following, setFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const [showComments, setShowComments] = useState(false);
   const bodyRef = useRef(null);
+  const commentsRef = useRef(null);
+
+  const fetchArticle = async () => {
+    try {
+      const articleRes = await apiClient(endpoints.article(id));
+      if (!articleRes.ok) throw new Error('Article not found');
+      const articleData = await articleRes.json();
+      setArticle(articleData);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchArticle = async () => {
-      try {
-        const [articleRes] = await Promise.all([
-          apiClient(endpoints.article(id)),
-        ]);
-        if (!articleRes.ok) throw new Error('Article not found');
-        const articleData = await articleRes.json();
-        setArticle(articleData);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchArticle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
@@ -52,10 +53,24 @@ export default function Article() {
     return () => window.removeEventListener('scroll', onScroll);
   }, [id]);
 
+  const handleCommentAdded = (newCount) => {
+    setArticle((prev) => (prev ? { ...prev, comments_count: newCount } : prev));
+  };
+
+  const toggleComments = () => {
+    setShowComments(!showComments);
+    if (!showComments) {
+      setTimeout(() => {
+        commentsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  };
+
   if (loading) {
     return (
       <article className="reader">
         <div className="reader-content container">
+          <Skeleton height={320} borderRadius={12} style={{ marginBottom: 32 }} />
           <header className="reader-header">
             <Skeleton width={100} />
             <Skeleton height={60} count={2} />
@@ -97,6 +112,15 @@ export default function Article() {
       </div>
 
       <div className="reader-content container">
+        {/* Larger featured cover image — as required across the app's image spec */}
+        <div className="w-full h-64 sm:h-96 rounded-xl overflow-hidden mb-8 shadow-sm">
+          <SafeImage
+            src={article.image_url}
+            alt={article.title}
+            fallbackColor={article.cover_color || '#1F4E4A'}
+          />
+        </div>
+
         <header className="reader-header">
           <span className="eyebrow">{article.tags?.[0]?.name || ''}</span>
           <h1>{article.title}</h1>
@@ -117,33 +141,50 @@ export default function Article() {
                 {article.read_mins} min read · {new Date(article.published_at || article.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </span>
             </div>
-            {/* {user && user.handle !== author.handle && (
-              <button
-                className={`btn ${following ? 'btn-ghost' : 'btn-primary'} reader-follow`}
-                onClick={() => setFollowing((f) => !f)}
-              >
-                {following ? 'Following' : 'Follow'}
-              </button>
-            )} */}
           </div>
-
         </header>
 
         <div className="reader-body" ref={bodyRef}>
           <div dangerouslySetInnerHTML={{ __html: article.body }} />
         </div>
 
-          <div className="reader-actions">
-            <ClapButton articleId={article.id} initialClaps={article.claps_count} initialClapped={article.is_clapped} />
-            <SaveButton articleId={article.id} />
-            <span className="reader-comment-count">💬 {article.comments_count} responses</span>
-          </div>
-        {/* <div className="reader-actions reader-actions--footer">
+        <div className="reader-actions reader-actions--footer">
           <ClapButton articleId={article.id} initialClaps={article.claps_count} initialClapped={article.is_clapped} />
           <SaveButton articleId={article.id} />
-        </div> */}
+          <button
+            className="reader-comment-toggle"
+            onClick={toggleComments}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: 'none',
+              border: 'none',
+              color: 'var(--ink-soft)',
+              cursor: 'pointer',
+              font: 'inherit',
+              padding: 0,
+            }}
+            aria-expanded={showComments}
+          >
+            💬 {article.comments_count} responses {showComments ? '▲' : '▼'}
+          </button>
+        </div>
 
-        <CommentSection articleId={article.id} initialCount={article.comments_count} />
+        <div
+          ref={commentsRef}
+          id="comments"
+          style={{
+            scrollMarginTop: '80px',
+            display: showComments ? 'block' : 'none',
+          }}
+        >
+          <CommentSection
+            articleId={article.id}
+            initialCount={article.comments_count}
+            onCommentAdded={handleCommentAdded}
+          />
+        </div>
       </div>
     </article>
   );

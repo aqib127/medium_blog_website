@@ -33,7 +33,7 @@ INSTALLED_APPS = [
     'reading_history',
     'reports',
     'api',
-    'chatbot',   # <-- added
+    'chatbot',
 ]
 
 MIDDLEWARE = [
@@ -149,8 +149,9 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
-# Groq API Key
-# GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
+# Anthropic API Key
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+USE_MOCK_CHATBOT = os.environ.get('USE_MOCK_CHATBOT', 'False') == 'True'
 
 LOGGING = {
     'version': 1,

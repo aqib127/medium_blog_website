@@ -36,7 +36,8 @@ export const endpoints = {
   reports: `${baseURL}reports/`,
 
   tags: `${baseURL}articles/tags/`,
-  tagArticles: (slug) => `${baseURL}articles/?tags=${slug}`,
+  // FIXED: use tags__slug (double underscore) for Django filter
+  tagArticles: (slug) => `${baseURL}articles/?tags__slug=${slug}`,
 
   chatbot: `${baseURL}chatbot/`,
 };

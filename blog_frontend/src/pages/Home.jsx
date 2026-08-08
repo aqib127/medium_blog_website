@@ -21,18 +21,15 @@ export default function Home() {
     try {
       let url = endpoints.articles;
       if (tagSlug) {
-        // ✅ Correct filter parameter as per backend
-        url += `?tags__slug=${tagSlug}`;
-        console.log(`[Home] Fetching articles with tag slug: ${tagSlug} -> ${url}`);
-      } else {
-        console.log(`[Home] Fetching all articles: ${url}`);
+        // Correct Django filter param: tags__slug
+        url += `?tags__slug=${encodeURIComponent(tagSlug)}`;
       }
       const res = await apiClient(url);
       if (!res.ok) throw new Error(`Articles API error: ${res.status}`);
       const data = await res.json();
-      const articleList = data.results || data;
-      console.log(`[Home] Received ${articleList.length} articles`);
-      setArticles(articleList);
+      // Always replace results — never append — so switching tags never mixes lists.
+      setArticles(data.results || data);
+      setError(null);
     } catch (err) {
       console.error('[Home] Error fetching articles:', err);
       setError(err.message || 'Failed to load articles.');
@@ -51,8 +48,7 @@ export default function Home() {
         const featuredData = featuredRes.ok ? await featuredRes.json() : null;
         const tagsData = tagsRes.ok ? await tagsRes.json() : [];
         setFeatured(featuredData);
-        setTags(tagsData);
-        console.log(`[Home] Loaded ${tagsData.length} tags`);
+        setTags(tagsData.results || tagsData);
       } catch (err) {
         console.error('[Home] Error fetching meta data:', err);
       }
@@ -60,12 +56,12 @@ export default function Home() {
     fetchMeta();
   }, []);
 
+  // Re-fetch whenever the active tag changes — completely replaces previous results.
   useEffect(() => {
     fetchArticles(activeTag);
   }, [activeTag]);
 
   const handleTagSelect = (tagSlug) => {
-    console.log(`[Home] Tag selected: ${tagSlug}`);
     setActiveTag(tagSlug);
   };
 
@@ -86,7 +82,7 @@ export default function Home() {
               <Link to="/write" className="btn btn-ghost">Start writing</Link>
             </div>
           </div>
-          {loading ? (
+          {loading && !featured ? (
             <div className="hero-cover" style={{ aspectRatio: '4/5' }}>
               <Skeleton height="100%" />
             </div>
@@ -103,7 +99,7 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="container feed-layout">
+      <div className="feed-layout">
         <main className="feed-main">
           <h2 className="feed-heading">{activeTag ? `#${activeTag}` : 'Latest'}</h2>
           <div className="feed-list">
@@ -120,7 +116,7 @@ export default function Home() {
             )}
           </div>
         </main>
-        <Sidebar activeTag={activeTag} onTagSelect={handleTagSelect} tags={tags} loading={loading} />
+        <Sidebar activeTag={activeTag} onTagSelect={handleTagSelect} tags={tags} loading={loading && tags.length === 0} />
       </div>
     </>
   );
