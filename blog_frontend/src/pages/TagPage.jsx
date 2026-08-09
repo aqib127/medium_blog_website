@@ -70,7 +70,7 @@ export default function TagPage() {
             <p className="tag-empty">No articles found for this tag.</p>
           ) : (
             articles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
+              <ArticleCard key={article.id} article={article} activeTag={slug} />
             ))
           )}
         </div>

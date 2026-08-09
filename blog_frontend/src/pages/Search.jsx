@@ -92,7 +92,7 @@ export default function Search() {
             <>
               <p className="search-count">{articles.length} result{articles.length === 1 ? '' : 's'}</p>
               {articles.map((article) => (
-                <ArticleCard key={article.id} article={article} />
+                <ArticleCard key={article.id} article={article} activeTag={activeTag} />
               ))}
             </>
           )}

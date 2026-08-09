@@ -81,7 +81,7 @@ export default function Articles() {
             <p className="feed-empty">No articles found for this tag.</p>
           ) : (
             articles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
+              <ArticleCard key={article.id} article={article} activeTag={activeTag} />
             ))
           )}
         </div>

@@ -3,6 +3,7 @@ import { useParams, Link, Navigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { endpoints } from '../config/api';
 import apiClient from '../utils/apiClient';
+import { useAuth } from '../context/AuthContext';
 import ClapButton from '../components/ClapButton';
 import FollowButton from '../components/FollowButton';
 import CommentSection from '../components/CommentSection';
@@ -15,6 +16,7 @@ import '../styles/article.css';
 
 export default function Article() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [article, setArticle] = useState(null);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -142,8 +144,12 @@ export default function Article() {
                 {article.read_mins} min read · {new Date(article.published_at || article.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </span>
             </div>
-            {/* Medium shows a follow control right next to the byline. */}
-            <FollowButton handle={author.handle} className="reader-follow-btn" />
+            {/* FIX: Medium shows a follow control next to the byline, but you
+                can't follow yourself — the backend returns 400 ("You cannot
+                follow yourself."). Only show it when the author isn't you. */}
+            {user && author.handle !== user.handle && (
+              <FollowButton handle={author.handle} className="reader-follow-btn" />
+            )}
           </div>
         </header>
 

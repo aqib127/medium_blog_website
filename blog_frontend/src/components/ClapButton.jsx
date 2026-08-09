@@ -4,11 +4,11 @@ import { endpoints } from '../config/api';
 import apiClient from '../utils/apiClient';
 import '../styles/clap-button.css';
 
-export default function ClapButton({ articleId, initialClaps = 0, userClapped = false }) {
+export default function ClapButton({ articleId, initialClaps = 0, initialClapped = false }) {
   const { user } = useAuth();
   const [claps, setClaps] = useState(initialClaps);
   const [active, setActive] = useState(false);
-  const [isClapped, setIsClapped] = useState(userClapped);
+  const [isClapped, setIsClapped] = useState(initialClapped);
   const [loading, setLoading] = useState(false);
 
   const handleClap = async () => {

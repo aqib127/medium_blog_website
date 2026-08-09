@@ -6,7 +6,7 @@ import Avatar from './Avatar';
 import SaveButton from './SaveButton';
 import '../styles/article-card.css';
 
-const ArticleCard = ({ article, loading, dense }) => {
+const ArticleCard = ({ article, loading, dense, activeTag = null }) => {
   if (loading) {
     return (
       <div className="article-card--loading">
@@ -27,7 +27,14 @@ const ArticleCard = ({ article, loading, dense }) => {
   const formattedDate = article.published_at || article.created_at
     ? formatDistanceToNow(new Date(article.published_at || article.created_at), { addSuffix: true })
     : '';
-  const primaryTag = article.tags && article.tags.length > 0 ? article.tags[0].name : null;
+  // Prefer showing the *active* (clicked) tag as the pill when the article has
+  // it — otherwise a multi-tagged article whose first tag differs from the one
+  // being browsed would display a mismatched pill and look "mixed" in the feed.
+  // Falls back to the article's first tag when no active tag is set.
+  const activeTagObj = activeTag && article.tags
+    ? article.tags.find((t) => t.slug === activeTag)
+    : null;
+  const primaryTag = activeTagObj ? activeTagObj.name : (article.tags && article.tags.length > 0 ? article.tags[0].name : null);
   const excerpt = article.dek || (article.body ? article.body.replace(/<[^>]+>/g, '').slice(0, 160) + '…' : '');
 
   return (

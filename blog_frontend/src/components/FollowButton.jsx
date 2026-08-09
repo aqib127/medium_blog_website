@@ -66,6 +66,10 @@ export default function FollowButton({ handle, initialFollowing = null, classNam
     }
   };
 
+  // Defensive: you can't follow yourself — the backend would reject it with
+  // a 400 ("You cannot follow yourself."). Render nothing in that case.
+  if (user && user.handle === handle) return null;
+
   return (
     <button
       type="button"
