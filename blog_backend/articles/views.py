@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.db.models import Count
 from .models import Article, Tag, Clap
 from .serializers import ArticleSerializer, ArticleCreateUpdateSerializer, TagSerializer
+from users.models import Follow
 
 
 class ArticleViewSet(viewsets.ModelViewSet):
@@ -37,6 +38,16 @@ class ArticleViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(status='published') | queryset.filter(
                 author=self.request.user
             ).exclude(status='archived')
+
+        # "Following" feed (Medium-style): published stories from authors the
+        # current user follows. Requires auth; anonymous falls back to the
+        # full published feed.
+        feed = self.request.query_params.get('feed')
+        if feed == 'following' and self.request.user.is_authenticated:
+            followed_ids = Follow.objects.filter(
+                follower=self.request.user
+            ).values_list('followed_id', flat=True)
+            queryset = queryset.filter(author_id__in=followed_ids)
 
         tag_slug = self.request.query_params.get('tags__slug')
         if tag_slug:

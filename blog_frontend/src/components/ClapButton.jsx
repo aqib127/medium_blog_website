@@ -41,12 +41,20 @@ export default function ClapButton({ articleId, initialClaps = 0, userClapped = 
 
   return (
     <button
-      className={`clap-btn ${isClapped ? 'clap-btn--used' : ''}`}
+      className={`clap-btn ${isClapped ? 'clap-btn--used' : ''} ${active ? 'clap-btn--burst' : ''}`}
       onClick={handleClap}
       aria-pressed={isClapped}
       aria-label="Clap for this story"
       disabled={loading}
     >
+      {/* FIX: a quick burst of particles on each clap for a Medium-like pop. */}
+      {active && (
+        <span className="clap-burst" aria-hidden="true">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <span key={i} className={`clap-particle clap-particle--${i}`} />
+          ))}
+        </span>
+      )}
       <span className={`clap-icon ${active ? 'clap-icon--pop' : ''}`}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <path

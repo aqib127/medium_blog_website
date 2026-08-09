@@ -8,6 +8,11 @@ import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import '../styles/home.css';
 
+const FEEDS = [
+  { key: 'for-you', label: 'For you' },
+  { key: 'following', label: 'Following' },
+];
+
 export default function Home() {
   const [articles, setArticles] = useState([]);
   const [featured, setFeatured] = useState(null);
@@ -15,19 +20,28 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
+  const [feed, setFeed] = useState('for-you');
 
-  const fetchArticles = async (tagSlug = null) => {
+  const buildUrl = (tagSlug, activeFeed) => {
+    const params = new URLSearchParams();
+    if (tagSlug) {
+      // Correct Django filter param: tags__slug
+      params.set('tags__slug', tagSlug);
+    }
+    if (activeFeed === 'following') {
+      params.set('feed', 'following');
+    }
+    const qs = params.toString();
+    return qs ? `${endpoints.articles}?${qs}` : endpoints.articles;
+  };
+
+  const fetchArticles = async (tagSlug = null, activeFeed = feed) => {
     setLoading(true);
     try {
-      let url = endpoints.articles;
-      if (tagSlug) {
-        // Correct Django filter param: tags__slug
-        url += `?tags__slug=${encodeURIComponent(tagSlug)}`;
-      }
-      const res = await apiClient(url);
+      const res = await apiClient(buildUrl(tagSlug, activeFeed));
       if (!res.ok) throw new Error(`Articles API error: ${res.status}`);
       const data = await res.json();
-      // Always replace results — never append — so switching tags never mixes lists.
+      // Always replace results — never append — so switching never mixes lists.
       setArticles(data.results || data);
       setError(null);
     } catch (err) {
@@ -56,10 +70,11 @@ export default function Home() {
     fetchMeta();
   }, []);
 
-  // Re-fetch whenever the active tag changes — completely replaces previous results.
+  // Re-fetch whenever the active tag or feed changes — replaces previous results.
   useEffect(() => {
-    fetchArticles(activeTag);
-  }, [activeTag]);
+    fetchArticles(activeTag, feed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTag, feed]);
 
   const handleTagSelect = (tagSlug) => {
     setActiveTag(tagSlug);
@@ -102,12 +117,33 @@ export default function Home() {
       <div className="feed-layout">
         <main className="feed-main">
           <h2 className="feed-heading">{activeTag ? `#${activeTag}` : 'Latest'}</h2>
+
+          {/* Medium-style feed tabs: "For you" and (when signed in) "Following". */}
+          <div className="feed-tabs" role="tablist" aria-label="Feed">
+            {FEEDS.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={feed === key}
+                className={`feed-tab ${feed === key ? 'feed-tab--active' : ''}`}
+                onClick={() => setFeed(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           <div className="feed-list">
             {loading ? (
               Array(3).fill().map((_, i) => <ArticleCard key={i} loading dense />)
             ) : articles.length === 0 ? (
               <p style={{ padding: '40px 0', color: 'var(--ink-soft)', textAlign: 'center' }}>
-                No articles found for this tag.
+                {feed === 'following'
+                  ? 'Stories from writers you follow will appear here. Follow some authors to build your feed.'
+                  : activeTag
+                    ? 'No articles found for this tag.'
+                    : 'No stories yet.'}
               </p>
             ) : (
               articles.map((article) => (

@@ -8,7 +8,7 @@ Django 4.2 / DRF / SimpleJWT / PostgreSQL. Root of the Django project is `blog_b
 - `.env` holds secrets/config (DB, JWT lifetimes, CORS, Anthropic key). Never commit real secrets.
 
 ## Apps (each under `blog_backend/`)
-`core`, `users`, `articles`, `comments`, `bookmarks`, `notifications`, `reading_history`, `reports`, `chatbot`, plus `api/` (legacy url aggregation).
+`core`, `users`, `articles`, `comments`, `bookmarks`, `notifications`, `reading_history`, `reports`, `chatbot`. All routes are wired in `config/urls.py`.
 
 ## Conventions
 - **Auth:** JWT via SimpleJWT (`Bearer` header). Default DRF permission is `IsAuthenticatedOrReadOnly`.

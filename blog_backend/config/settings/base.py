@@ -32,7 +32,6 @@ INSTALLED_APPS = [
     'notifications',
     'reading_history',
     'reports',
-    'api',
     'chatbot',
 ]
 

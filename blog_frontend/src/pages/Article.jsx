@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import { endpoints } from '../config/api';
 import apiClient from '../utils/apiClient';
-import { useAuth } from '../context/AuthContext';
 import ClapButton from '../components/ClapButton';
+import FollowButton from '../components/FollowButton';
 import CommentSection from '../components/CommentSection';
 import SaveButton from '../components/SaveButton';
 import Avatar from '../components/Avatar';
@@ -141,16 +142,28 @@ export default function Article() {
                 {article.read_mins} min read · {new Date(article.published_at || article.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </span>
             </div>
+            {/* Medium shows a follow control right next to the byline. */}
+            <FollowButton handle={author.handle} className="reader-follow-btn" />
           </div>
         </header>
 
         <div className="reader-body" ref={bodyRef}>
-          <div dangerouslySetInnerHTML={{ __html: article.body }} />
+          {/* FIX: sanitize before injecting — author content can contain
+              arbitrary HTML that would otherwise allow stored XSS. */}
+          <div
+            className="reader-body-html"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.body) }}
+          />
         </div>
 
         <div className="reader-actions reader-actions--footer">
-          <ClapButton articleId={article.id} initialClaps={article.claps_count} initialClapped={article.is_clapped} />
-          <SaveButton articleId={article.id} />
+          {/* FIX: key the interactive buttons by article id so their local
+              state (clap count, saved state) resets when navigating from
+              one story to the next — React Router reuses the same component
+              instance across /article/:id transitions, so useState() alone
+              would otherwise carry stale clap/save state between articles. */}
+          <ClapButton key={article.id} articleId={article.id} initialClaps={article.claps_count} initialClapped={article.is_clapped} />
+          <SaveButton key={article.id} articleId={article.id} initialSaved={article.is_bookmarked} />
           <button
             className="reader-comment-toggle"
             onClick={toggleComments}

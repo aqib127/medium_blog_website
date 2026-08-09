@@ -4,12 +4,19 @@ import apiClient from '../utils/apiClient';
 import { useAuth } from '../context/AuthContext';
 import '../styles/save-button.css';
 
-export default function SaveButton({ articleId }) {
+export default function SaveButton({ articleId, initialSaved = null }) {
   const { user } = useAuth();
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // FIX: if the parent already knows the bookmarked state (e.g. the article
+    // detail page passes article.is_bookmarked), use it directly and skip the
+    // extra round-trip that used to fetch the ENTIRE bookmarks list on mount.
+    if (initialSaved !== null) {
+      setSaved(initialSaved);
+      return;
+    }
     if (!user) return;
     const checkSaved = async () => {
       try {
@@ -24,7 +31,7 @@ export default function SaveButton({ articleId }) {
       }
     };
     checkSaved();
-  }, [articleId, user]);
+  }, [articleId, user, initialSaved]);
 
   const toggleSave = async () => {
     if (!user) {

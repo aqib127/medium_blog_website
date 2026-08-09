@@ -144,6 +144,47 @@
   flex-direction: column;
 }
 
+.feed-tabs {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.feed-tab {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+  padding: 6px 0;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.15s ease;
+}
+
+.feed-tab:hover {
+  color: var(--ink);
+}
+
+.feed-tab--active {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.feed-tab--active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -15px;
+  height: 2px;
+  background: var(--Blog, #1f4e4a);
+  border-radius: 2px;
+}
+
 .feed-empty {
   padding: 56px 0;
   text-align: center;

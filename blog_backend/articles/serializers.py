@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 from .models import Tag, Article, ArticleTag, ArticleImage, Clap
 from .topic_images import build_topic_image_url
@@ -89,23 +90,43 @@ class ArticleCreateUpdateSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('author', 'claps_count', 'comments_count', 'view_count', 'created_at', 'updated_at')
 
+    def _publish_if_needed(self, instance, previous_status=None):
+        """
+        FIX: published_at was never set when a draft was published, so the
+        featured/trending endpoints (which sort by -published_at) never
+        surfaced newly published stories, and NULLs sorted last. Set the
+        publish timestamp the first time a story transitions into the
+        'published' state, and clear it if it's unpublished again.
+        """
+        new_status = getattr(instance, 'status', None)
+        if new_status == Article.Status.PUBLISHED and previous_status != Article.Status.PUBLISHED:
+            if not instance.published_at:
+                instance.published_at = timezone.now()
+        elif new_status != Article.Status.PUBLISHED:
+            instance.published_at = None
+        return instance
+
     def create(self, validated_data):
         image_file = validated_data.pop('image', None)
         tag_ids = validated_data.pop('tag_ids', [])
         article = Article.objects.create(**validated_data)
+        self._publish_if_needed(article)
         if image_file:
             article.image = image_file
-            article.save()
         if tag_ids:
             article.tags.set(tag_ids)
+        article.save()
         return article
 
     def update(self, instance, validated_data):
         image_file = validated_data.pop('image', None)
         tag_ids = validated_data.pop('tag_ids', None)
 
+        previous_status = instance.status
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+
+        self._publish_if_needed(instance, previous_status)
 
         if image_file is not None:
             instance.image = image_file

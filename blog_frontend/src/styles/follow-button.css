@@ -1,0 +1,27 @@
+.follow-btn {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.follow-btn:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.follow-btn--following {
+  color: var(--ink-soft);
+}
+
+.follow-btn--following:hover {
+  color: var(--danger, #c0392b);
+  border-color: currentColor;
+}
