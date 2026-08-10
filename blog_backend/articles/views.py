@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Count
+from django.db.models import Count, Q
 from .models import Article, Tag, Clap
 from .serializers import ArticleSerializer, ArticleCreateUpdateSerializer, TagSerializer
 from users.models import Follow
@@ -32,12 +32,30 @@ class ArticleViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        if not self.request.user.is_authenticated:
+        # Drafts are private — they must only be visible to their author and
+        # ONLY when explicitly requested via ?status=draft (the Drafts page).
+        # Check this first so the published-only filter below never applies
+        # status='published' to a draft-mode list query (that would zero the
+        # set — nothing is both 'published' AND 'draft').
+        status_param = self.request.query_params.get('status')
+        if status_param == 'draft' and self.request.user.is_authenticated:
+            queryset = queryset.filter(author=self.request.user, status='draft')
+            return queryset.distinct()
+
+        # Public list — only published articles for everyone. In the main
+        # feed, reading lists, and search results, drafts never appear.
+        # For detail actions (retrieve / update / delete), an author still
+        # needs access to their own drafts — the Write page loads drafts for
+        # editing via GET /articles/:id/.
+        if self.action == 'list':
+            queryset = queryset.filter(status='published')
+        elif not self.request.user.is_authenticated:
             queryset = queryset.filter(status='published')
         else:
-            queryset = queryset.filter(status='published') | queryset.filter(
-                author=self.request.user
-            ).exclude(status='archived')
+            queryset = queryset.filter(
+                Q(status='published') |
+                Q(author=self.request.user, status='draft')
+            )
 
         # "Following" feed (Medium-style): published stories from authors the
         # current user follows. Requires auth; anonymous falls back to the
@@ -52,10 +70,6 @@ class ArticleViewSet(viewsets.ModelViewSet):
         tag_slug = self.request.query_params.get('tags__slug')
         if tag_slug:
             queryset = queryset.filter(tags__slug=tag_slug)
-
-        status_param = self.request.query_params.get('status')
-        if status_param == 'draft' and self.request.user.is_authenticated:
-            queryset = queryset.filter(author=self.request.user, status='draft')
 
         return queryset.distinct()
 
