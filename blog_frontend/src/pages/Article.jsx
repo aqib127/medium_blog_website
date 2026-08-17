@@ -101,12 +101,19 @@ export default function Article() {
   if (!article) return <Navigate to="/" replace />;
 
   const author = article.author;
+  const statusLabel = article.status
+    ? article.status.charAt(0).toUpperCase() + article.status.slice(1)
+    : '';
 
   return (
     <article className="reader">
       <div className="reader-margin" aria-hidden="true">
         <div className="folio-rail">
           <span className="folio-number">No. {article.folio || '---'}</span>
+          <div className="folio-meta">
+            <span className="folio-meta-row">ID · {article.id}</span>
+            <span className="folio-meta-row">Type · {statusLabel}</span>
+          </div>
           <div className="folio-track">
             <div className="folio-fill" style={{ height: `${progress}%` }} />
           </div>

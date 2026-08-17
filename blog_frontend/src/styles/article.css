@@ -55,6 +55,22 @@
   color: var(--ink-soft);
 }
 
+.folio-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.folio-meta-row {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
 .reader-content {
   max-width: 700px;
 }
