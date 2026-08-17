@@ -23,8 +23,6 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'drf_spectacular',
-    'gunicorn',
-    'setuptools<81',
 
     'core',
     'users',
