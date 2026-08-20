@@ -4,6 +4,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 try:
+    import debug_toolbar  # noqa: F401  — real import so ImportError is actually raised
     INSTALLED_APPS += ['debug_toolbar']
     MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
     INTERNAL_IPS = ['127.0.0.1']
