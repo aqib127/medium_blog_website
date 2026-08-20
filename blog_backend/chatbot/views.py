@@ -5,7 +5,8 @@ from django.conf import settings
 from django.db.models import Q, Count
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework import status
 
 import anthropic
@@ -409,11 +410,12 @@ def coerce_args(tool_name, args):
     return args
 
 class ChatbotView(APIView):
-    permission_classes = [AllowAny]
-    authentication_classes = []
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'chatbot'
 
     def post(self, request):
-        user = request.user if request.user.is_authenticated else None
+        user = request.user
         data = request.data
         message = data.get('message', '').strip()
         history = data.get('history', [])

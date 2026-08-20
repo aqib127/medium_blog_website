@@ -11,8 +11,6 @@ export default function SignUp() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  console.log(user);
-
   useEffect(() => {
     if (user) {
       navigate("/articles");

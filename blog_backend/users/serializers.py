@@ -3,21 +3,28 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings
+from core.utils import validate_hex_color
 from .models import User, UserSettings, Follow
 
 class UserSerializer(serializers.ModelSerializer):
+    """Public user representation — deliberately excludes `email`.
+
+    This serializer backs profile, followers and following endpoints, all of
+    which are unauthenticated. Email is personal data; exposing it publicly
+    (even read-only) is a GDPR-reportable leak.
+    """
     avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = (
-            'id', 'email', 'name', 'handle', 'bio', 'location',
+            'id', 'name', 'handle', 'bio', 'location',
             'twitter', 'github', 'website', 'avatar', 'avatar_color',
             'followers_count', 'following_count', 'articles_count',
             'date_joined'
         )
         read_only_fields = (
-            'id', 'email', 'handle', 'followers_count',
+            'id', 'handle', 'followers_count',
             'following_count', 'articles_count', 'date_joined'
         )
 
@@ -30,6 +37,16 @@ class UserSerializer(serializers.ModelSerializer):
             return obj.avatar.url
         return None
 
+
+class PrivateUserSerializer(UserSerializer):
+    """Self-facing user representation — includes `email`.
+
+    Use only for endpoints where the caller is the owner (MeView, and the
+    user payload returned by login/register).
+    """
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + ('email',)
+
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -41,7 +58,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             'twitter': {'required': False},
             'github': {'required': False},
             'website': {'required': False},
-            'avatar_color': {'required': False},
+            'avatar_color': {'required': False, 'validators': [validate_hex_color]},
         }
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -96,8 +113,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             raise serializers.ValidationError('Invalid credentials.')
         
         refresh = self.get_token(user)
-        # Use UserSerializer with request context
-        user_data = UserSerializer(user, context=self.context).data
+        # Self-facing: the caller is logging in as this user, so email is fine.
+        user_data = PrivateUserSerializer(user, context=self.context).data
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),

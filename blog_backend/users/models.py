@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from core.models import BaseModel
+from core.utils import validate_hex_color
 from .managers import UserManager
 import os
 
@@ -15,7 +16,7 @@ class User(AbstractUser, BaseModel):
     github = models.CharField(max_length=100, blank=True, default='')
     website = models.URLField(max_length=200, blank=True, default='')
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
-    avatar_color = models.CharField(max_length=7, default='#1F4E4A')
+    avatar_color = models.CharField(max_length=7, default='#1F4E4A', validators=[validate_hex_color])
     followers_count = models.PositiveIntegerField(default=0)
     following_count = models.PositiveIntegerField(default=0)
     articles_count = models.PositiveIntegerField(default=0)

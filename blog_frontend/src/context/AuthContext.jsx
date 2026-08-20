@@ -1,18 +1,47 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { endpoints } from '../config/api';
 import apiClient from '../utils/apiClient';
 
 const AuthContext = createContext(null);
+
+// DRF returns field errors as `{ field: [messages] }`. Walk that shape
+// generically so sign-in and sign-up report every field error consistently.
+const extractErrors = (data) => {
+  if (!data || typeof data !== 'object') return 'Something went wrong.';
+  const messages = [];
+  Object.values(data).forEach((value) => {
+    if (Array.isArray(value)) {
+      value.forEach((m) => {
+        if (typeof m === 'string') messages.push(m);
+        else if (m && typeof m === 'object') messages.push(extractErrors(m));
+      });
+    } else if (typeof value === 'string') {
+      messages.push(value);
+    }
+  });
+  return messages.join(' ') || 'Something went wrong.';
+};
+
+// Guard against a non-JSON body (e.g. an HTML error page from a proxy).
+const parseJson = async (res) => {
+  try {
+    return await res.json();
+  } catch {
+    return {};
+  }
+};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
     const token = localStorage.getItem('access');
     if (token) {
       fetchMe()
         .then((u) => {
+          if (!active) return;
           setUser(u);
           localStorage.setItem('user', JSON.stringify(u));
         })
@@ -21,10 +50,15 @@ export function AuthProvider({ children }) {
           localStorage.removeItem('refresh');
           localStorage.removeItem('user');
         })
-        .finally(() => setLoading(false));
+        .finally(() => {
+          if (active) setLoading(false);
+        });
     } else {
       setLoading(false);
     }
+    return () => {
+      active = false;
+    };
   }, []);
 
   const fetchMe = async () => {
@@ -35,6 +69,13 @@ export function AuthProvider({ children }) {
     return res.json();
   };
 
+  const storeAuth = (data) => {
+    localStorage.setItem('access', data.access);
+    localStorage.setItem('refresh', data.refresh);
+    setUser(data.user);
+    localStorage.setItem('user', JSON.stringify(data.user));
+  };
+
   const signIn = async (email, password) => {
     try {
       const res = await fetch(endpoints.login, {
@@ -42,18 +83,11 @@ export function AuthProvider({ children }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
+      const data = await parseJson(res);
       if (!res.ok) {
-        let errorMsg = data.detail || data.message || 'Invalid credentials.';
-        if (data.non_field_errors) errorMsg = data.non_field_errors.join(' ');
-        if (data.email) errorMsg = data.email.join(' ');
-        if (data.password) errorMsg = data.password.join(' ');
-        return { success: false, error: errorMsg };
+        return { success: false, error: extractErrors(data) };
       }
-      localStorage.setItem('access', data.access);
-      localStorage.setItem('refresh', data.refresh);
-      setUser(data.user);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      storeAuth(data);
       return { success: true, user: data.user };
     } catch (error) {
       return { success: false, error: error.message };
@@ -67,24 +101,28 @@ export function AuthProvider({ children }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name, password, handle }),
       });
-      const data = await res.json();
+      const data = await parseJson(res);
       if (!res.ok) {
-        let errorMsg = 'Registration failed.';
-        if (data.email) errorMsg = data.email.join(' ');
-        else if (data.password) errorMsg = data.password.join(' ');
-        else if (data.name) errorMsg = data.name.join(' ');
-        else if (data.handle) errorMsg = data.handle.join(' ');
-        else if (data.detail) errorMsg = data.detail;
-        else if (data.non_field_errors) errorMsg = data.non_field_errors.join(' ');
-        return { success: false, error: errorMsg };
+        return { success: false, error: extractErrors(data) };
       }
-      return await signIn(email, password);
+      // The register response already includes tokens + user — no second login.
+      storeAuth(data);
+      return { success: true, user: data.user };
     } catch (error) {
       return { success: false, error: error.message };
     }
   };
 
   const signOut = () => {
+    const refresh = localStorage.getItem('refresh');
+    // Best-effort server-side blacklist; local state is cleared regardless.
+    if (refresh) {
+      fetch(endpoints.logout, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh }),
+      }).catch(() => {});
+    }
     localStorage.removeItem('access');
     localStorage.removeItem('refresh');
     localStorage.removeItem('user');
@@ -96,11 +134,12 @@ export function AuthProvider({ children }) {
     localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
-  return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, updateUser }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({ user, loading, signIn, signUp, signOut, updateUser }),
+    [user, loading],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => useContext(AuthContext);

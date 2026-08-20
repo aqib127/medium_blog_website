@@ -8,8 +8,16 @@ const subscribeTokenRefresh = (cb) => {
   refreshSubscribers.push(cb);
 };
 
-const onTokenRefreshed = () => {
-  refreshSubscribers.forEach((cb) => cb());
+// Every queued request must settle no matter how the refresh ends — the
+// invariant for a queue is that *every* path out of the critical section
+// drains it (success, failure, and exception alike).
+const onTokenRefreshed = (newToken) => {
+  refreshSubscribers.forEach((cb) => cb.resolve(newToken));
+  refreshSubscribers = [];
+};
+
+const onTokenRefreshFailed = (error) => {
+  refreshSubscribers.forEach((cb) => cb.reject(error));
   refreshSubscribers = [];
 };
 
@@ -43,54 +51,48 @@ const apiClient = async (endpoint, options = {}) => {
             body: JSON.stringify({ refresh }),
           });
 
-          if (refreshRes.ok) {
-            const data = await refreshRes.json();
-            localStorage.setItem('access', data.access);
-            token = data.access;
-            // Update headers with new token
-            headers['Authorization'] = `Bearer ${data.access}`;
-            isRefreshing = false;
-            onTokenRefreshed();
-            // Retry the original request with new token
-            const retryRes = await fetch(endpoint, {
-              ...options,
-              headers,
-            });
-            return retryRes;
-          } else {
-            // Refresh failed – clear tokens and throw error
-            localStorage.removeItem('access');
-            localStorage.removeItem('refresh');
-            localStorage.removeItem('user');
-            isRefreshing = false;
+          if (!refreshRes.ok) {
             throw new Error('Session expired. Please sign in again.');
           }
+
+          const data = await refreshRes.json();
+          localStorage.setItem('access', data.access);
+          token = data.access;
+          headers['Authorization'] = `Bearer ${data.access}`;
+          onTokenRefreshed(data.access);
+
+          // Retry the original request with the new token
+          const retryRes = await fetch(endpoint, {
+            ...options,
+            headers,
+          });
+          return retryRes;
         } catch (error) {
           localStorage.removeItem('access');
           localStorage.removeItem('refresh');
           localStorage.removeItem('user');
+          onTokenRefreshFailed(error);
+          throw error;
+        } finally {
           isRefreshing = false;
-          throw new Error('Session expired. Please sign in again.');
         }
       } else {
         // Another request is already refreshing – wait for it
         return new Promise((resolve, reject) => {
-          subscribeTokenRefresh(async () => {
-            try {
-              const newToken = localStorage.getItem('access');
-              if (!newToken) {
-                reject(new Error('Session expired.'));
-                return;
+          subscribeTokenRefresh({
+            resolve: async (newToken) => {
+              try {
+                headers['Authorization'] = `Bearer ${newToken}`;
+                const retryRes = await fetch(endpoint, {
+                  ...options,
+                  headers,
+                });
+                resolve(retryRes);
+              } catch (err) {
+                reject(err);
               }
-              headers['Authorization'] = `Bearer ${newToken}`;
-              const retryRes = await fetch(endpoint, {
-                ...options,
-                headers,
-              });
-              resolve(retryRes);
-            } catch (err) {
-              reject(err);
-            }
+            },
+            reject,
           });
         });
       }
@@ -102,5 +104,4 @@ const apiClient = async (endpoint, options = {}) => {
   return makeRequest();
 };
 
-// CRITICAL LINE: This must be here!
 export default apiClient;

@@ -1,16 +1,18 @@
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db import transaction
 from django.db.models import Count, Q
 from .models import Article, Tag, Clap
 from .serializers import ArticleSerializer, ArticleCreateUpdateSerializer, TagSerializer
 from users.models import Follow
+from core.permissions import IsOwnerOrReadOnly
 
 
 class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all().order_by('-created_at')
     serializer_class = ArticleSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
 
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'dek', 'body', 'tags__name', 'author__name', 'author__handle']
@@ -136,17 +138,16 @@ class ArticleViewSet(viewsets.ModelViewSet):
         Keeps Article.claps_count in sync as a denormalized counter.
         """
         article = self.get_object()
-        clap_qs = Clap.objects.filter(user=request.user, article=article)
+        with transaction.atomic():
+            _, created = Clap.objects.get_or_create(user=request.user, article=article)
+            if not created:
+                Clap.objects.filter(user=request.user, article=article).delete()
+                clapped = False
+            else:
+                clapped = True
 
-        if clap_qs.exists():
-            clap_qs.delete()
-            clapped = False
-        else:
-            Clap.objects.create(user=request.user, article=article)
-            clapped = True
-
-        article.claps_count = article.claps.count()
-        article.save(update_fields=['claps_count'])
+            article.claps_count = article.claps.count()
+            article.save(update_fields=['claps_count'])
 
         return Response(
             {'claps_count': article.claps_count, 'clapped': clapped},

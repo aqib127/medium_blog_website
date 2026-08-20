@@ -1,4 +1,5 @@
 import os
+import logging
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -9,12 +10,13 @@ from django.shortcuts import get_object_or_404
 from django.db import IntegrityError
 from .models import User, Follow
 from .serializers import (
-    UserSerializer, UserProfileUpdateSerializer,
+    UserSerializer, PrivateUserSerializer, UserProfileUpdateSerializer,
     RegisterSerializer, CustomTokenObtainPairSerializer
 )
-from core.permissions import IsOwnerOrReadOnly
 from articles.serializers import ArticleSerializer
 from articles.models import Article
+
+logger = logging.getLogger(__name__)
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -26,7 +28,7 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         refresh = RefreshToken.for_user(user)
-        user_serializer = UserSerializer(user, context={'request': request})
+        user_serializer = PrivateUserSerializer(user, context={'request': request})
         return Response({
             'access': str(refresh.access_token),
             'refresh': str(refresh),
@@ -38,7 +40,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class MeView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = UserSerializer
+    serializer_class = PrivateUserSerializer
 
     def get_object(self):
         return self.request.user
@@ -50,15 +52,19 @@ class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        refresh_token = request.data.get('refresh')
+        if not refresh_token:
+            return Response({'detail': 'Refresh token required.'}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            refresh_token = request.data.get('refresh')
-            if not refresh_token:
-                return Response({'detail': 'Refresh token required.'}, status=status.HTTP_400_BAD_REQUEST)
             token = RefreshToken(refresh_token)
             token.blacklist()
-            return Response({'detail': 'Successfully logged out.'}, status=status.HTTP_205_RESET_CONTENT)
-        except Exception as e:
-            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception:
+            logger.exception('Failed to blacklist refresh token')
+            return Response(
+                {'detail': 'Logout failed. Please try again.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response({'detail': 'Successfully logged out.'}, status=status.HTTP_205_RESET_CONTENT)
 
 class UserProfileView(generics.RetrieveAPIView):
     queryset = User.objects.all()
@@ -155,7 +161,7 @@ class FollowToggleView(APIView):
         follow.delete()
         return Response(
             {'detail': f'Unfollowed @{target.handle}.'},
-            status=status.HTTP_204_NO_CONTENT
+            status=status.HTTP_200_OK
         )
 
 class ProfileUpdateView(generics.UpdateAPIView):
@@ -166,12 +172,6 @@ class ProfileUpdateView(generics.UpdateAPIView):
 
     def get_queryset(self):
         return User.objects.filter(id=self.request.user.id)
-
-    def get_object(self):
-        user = super().get_object()
-        if user != self.request.user:
-            raise PermissionDenied('You can only update your own profile.')
-        return user
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)

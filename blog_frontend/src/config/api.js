@@ -7,6 +7,7 @@ export const endpoints = {
   refresh: `${baseURL}auth/refresh/`,
   verify: `${baseURL}auth/verify/`,
   me: `${baseURL}auth/me/`,
+  logout: `${baseURL}auth/logout/`,
 
   users: (handle) => `${baseURL}users/${handle}/`,
   userStories: (handle) => `${baseURL}users/${handle}/stories/`,

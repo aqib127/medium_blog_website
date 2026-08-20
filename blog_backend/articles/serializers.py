@@ -1,5 +1,6 @@
 from django.utils import timezone
 from rest_framework import serializers
+from core.utils import validate_hex_color
 from .models import Tag, Article, ArticleTag, ArticleImage, Clap
 from .topic_images import build_topic_image_url
 from users.serializers import UserSerializer
@@ -74,8 +75,8 @@ class ArticleCreateUpdateSerializer(serializers.ModelSerializer):
     actually accepts `image` (multipart file) and `tag_ids` (list of tag
     IDs) from the request body.
     """
-    tag_ids = serializers.ListField(
-        child=serializers.IntegerField(), required=False, write_only=True
+    tag_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Tag.objects.all(), many=True, required=False, write_only=True
     )
     tags = TagSerializer(many=True, read_only=True)
     image = serializers.ImageField(required=False, write_only=True, allow_null=True)
@@ -88,7 +89,15 @@ class ArticleCreateUpdateSerializer(serializers.ModelSerializer):
             'folio', 'read_mins', 'tag_ids', 'tags', 'image',
             'created_at', 'updated_at'
         )
-        read_only_fields = ('author', 'claps_count', 'comments_count', 'view_count', 'created_at', 'updated_at')
+        read_only_fields = (
+            'author', 'claps_count', 'comments_count', 'view_count',
+            'created_at', 'updated_at',
+            # Editorial/system-derived state is not client-writable:
+            'featured', 'published_at', 'folio', 'read_mins',
+        )
+        extra_kwargs = {
+            'cover_color': {'required': False, 'validators': [validate_hex_color]},
+        }
 
     def _publish_if_needed(self, instance, previous_status=None):
         """
@@ -102,7 +111,9 @@ class ArticleCreateUpdateSerializer(serializers.ModelSerializer):
         if new_status == Article.Status.PUBLISHED and previous_status != Article.Status.PUBLISHED:
             if not instance.published_at:
                 instance.published_at = timezone.now()
-        elif new_status != Article.Status.PUBLISHED:
+        elif new_status == Article.Status.DRAFT:
+            # A draft genuinely has no publication date; archiving/scheduling
+            # must NOT erase the historical publish timestamp.
             instance.published_at = None
         return instance
 

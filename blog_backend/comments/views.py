@@ -16,7 +16,4 @@ class CommentViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        article_id = self.request.data.get('article')
-        if not article_id:
-            raise serializers.ValidationError({'article': 'This field is required.'})
         serializer.save(author=self.request.user)

@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.text import slugify
 from core.models import BaseModel
+from core.utils import validate_hex_color
 from users.models import User
 
 
@@ -33,7 +34,7 @@ class Article(BaseModel):
     published_at = models.DateTimeField(null=True, blank=True)
     scheduled_for = models.DateTimeField(null=True, blank=True)
     featured = models.BooleanField(default=False)
-    cover_color = models.CharField(max_length=7, default='#1F4E4A')
+    cover_color = models.CharField(max_length=7, default='#1F4E4A', validators=[validate_hex_color])
     folio = models.CharField(max_length=10, blank=True, default='')
     read_mins = models.PositiveSmallIntegerField(default=1)
     claps_count = models.PositiveIntegerField(default=0)
