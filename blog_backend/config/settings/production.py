@@ -1,6 +1,39 @@
+import os
+
 from .base import *
 
 DEBUG = False
+
+# --- Deployment topology (Railway) ---
+# Railway terminates TLS at its proxy and forwards plain HTTP to gunicorn.
+# Without this, SECURE_SSL_REDIRECT loops on every request (ERR_TOO_MANY_REDIRECTS).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Allow localhost plus the Railway-assigned public domain (set automatically
+# by Railway at deploy time). Fall back to an env list if provided.
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+_railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+if _railway_domain:
+    ALLOWED_HOSTS += [_railway_domain, f'.{_railway_domain}']
+
+CSRF_TRUSTED_ORIGINS = []
+if _railway_domain:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{_railway_domain}')
+for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(','):
+    origin = origin.strip()
+    if origin:
+        CSRF_TRUSTED_ORIGINS.append(origin)
+
+# CORS: the React frontend runs on a separate origin. Local dev default plus
+# whatever you set in Railway's CORS_ALLOWED_ORIGINS env var.
+CORS_ALLOWED_ORIGINS = [
+    o for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()
+]
+if 'http://localhost:5173' not in CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS.append('http://localhost:5173')
+
+# Serve static files (admin, etc.) in production via WhiteNoise — no S3 needed.
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
