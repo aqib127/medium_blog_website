@@ -14,6 +14,8 @@ import anthropic
 from . import utils
 from articles.models import Article, Tag
 from users.models import User
+from rag.search import semantic_search
+from rag.generate import answer_with_rag
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,18 @@ TOOLS = [
                 "article_id": {"type": "integer", "description": "Numeric ID of the article"}
             },
             "required": ["article_id"]
+        }
+    },
+    {
+        "name": "search_articles_semantic",
+        "description": "Semantically search articles by meaning (vector/RAG retrieval). Use for open-ended or topic questions where keyword matching may miss relevant articles. Returns title, author, tags, snippet, and relevance score.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The question or topic to search for"},
+                "limit": {"type": "integer", "description": "Maximum number of results", "default": 5}
+            },
+            "required": ["query"]
         }
     },
     {
@@ -139,6 +153,7 @@ TOOLS = [
 
 TOOL_MAP = {
     'search_articles': utils.search_articles,
+    'search_articles_semantic': semantic_search,
     'get_article': utils.get_article,
     'get_user_profile': utils.get_user_profile,
     'get_user_followers': utils.get_user_followers,
@@ -304,17 +319,12 @@ def get_mock_response(message, user=None):
         query_match = re.search(r'(?:articles about|search|find|articles on)\s+([\w\s]+)', msg)
         if query_match:
             query = query_match.group(1).strip()
-            results = utils.search_articles(query, limit=5)
-            if results:
-                lines = '\n'.join([f"- {a['title']} by {a['author']}" for a in results])
-                return f"Articles matching '{query}':\n{lines}"
-            else:
-                return f"No articles found matching '{query}'. Try a different topic."
+            return answer_with_rag(query)
         else:
             return "Please specify what you want to search for (e.g., 'articles about technology')."
 
     # --- User profile ---
-    if re.search(r'author|profile|who is|about', msg):
+    if re.search(r'author|profile|who is', msg):
         handle_match = re.search(r'@([a-zA-Z0-9_-]+)', msg)
         if handle_match:
             handle = handle_match.group(1)
@@ -395,7 +405,7 @@ def coerce_args(tool_name, args):
                 args['article_id'] = int(args['article_id'])
             except (ValueError, TypeError):
                 raise ValueError("article_id must be an integer.")
-    if tool_name in ['search_articles', 'search_users']:
+    if tool_name in ['search_articles', 'search_articles_semantic', 'search_users']:
         if 'limit' in args:
             try:
                 args['limit'] = int(args['limit'])
@@ -442,9 +452,13 @@ class ChatbotView(APIView):
                 "You MUST use the provided tools to retrieve real data from the database. "
                 "DO NOT guess or make up answers. If a user asks for articles, authors, tags, bookmarks, etc., "
                 "you MUST call the appropriate tool. Only after receiving the tool result, you can answer the user. "
+                "For topic or open-ended questions, prefer 'search_articles_semantic' (vector/RAG search) over keyword search. "
                 "If a user asks about something that requires authentication (like bookmarks), inform them politely. "
                 "Additionally, you can answer questions about how the website works, its features, and how to use them. "
                 "Use the 'get_website_info' tool to get a description of the website features and instructions on how to perform common tasks. "
+                "ONLY answer questions that are related to this website — its articles, authors, tags, or how to use it. "
+                "If the user asks something unrelated to the website (general knowledge, weather, sports, current events, coding help, etc.), "
+                "do NOT answer it and do NOT call any tool. Instead reply with EXACTLY: 'Sorry, I can only answer questions about this website.' "
                 "Keep your answers concise and helpful. Do not expose private information of other users."
             )
 

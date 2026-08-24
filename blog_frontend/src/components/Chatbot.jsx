@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { endpoints } from '../config/api';
+import apiClient from '../utils/apiClient';
 import '../styles/chatbot.css';
 
 export default function Chatbot({ onClose }) {
@@ -26,13 +27,8 @@ export default function Chatbot({ onClose }) {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('access');
-      const response = await fetch(endpoints.chatbot, {
+      const response = await apiClient(endpoints.chatbot, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-        },
         body: JSON.stringify({
           message: input,
           history: messages.map(m => ({ role: m.role, content: m.content })),

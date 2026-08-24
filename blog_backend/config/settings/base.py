@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'drf_spectacular',
+    
 
     'core',
     'users',
@@ -47,6 +48,7 @@ INSTALLED_APPS = [
     'reading_history',
     'reports',
     'chatbot',
+    'rag',
 ]
 
 MIDDLEWARE = [
@@ -184,6 +186,13 @@ SPECTACULAR_SETTINGS = {
 # Anthropic API Key
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 USE_MOCK_CHATBOT = os.environ.get('USE_MOCK_CHATBOT', 'False') == 'True'
+
+# RAG / vector search — ChromaDB (embedded) + Ollama embeddings.
+OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
+OLLAMA_EMBED_MODEL = os.environ.get('OLLAMA_EMBED_MODEL', 'nomic-embed-text')
+OLLAMA_CHAT_MODEL = os.environ.get('OLLAMA_CHAT_MODEL', 'qwen2.5:1.5b')
+RAG_MIN_SIMILARITY = float(os.environ.get('RAG_MIN_SIMILARITY', '0.45'))
+CHROMA_PERSIST_DIR = os.environ.get('CHROMA_PERSIST_DIR') or str(BASE_DIR / 'chroma_data')
 
 LOGGING = {
     'version': 1,

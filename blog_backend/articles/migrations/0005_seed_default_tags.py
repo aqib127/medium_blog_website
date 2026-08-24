@@ -4,6 +4,7 @@ from django.db import migrations
 # tags to select and display without running the (destructive) seed command.
 DEFAULT_TAGS = [
     ('Technology', 'tech'),
+    ('Artificial Intelligence', 'ai'),
     ('Science', 'science'),
     ('Culture', 'culture'),
     ('Food', 'food'),

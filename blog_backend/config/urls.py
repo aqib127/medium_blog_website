@@ -21,6 +21,7 @@ urlpatterns = [
     path('api/v1/history/', include('reading_history.urls')),
     path('api/v1/reports/', include('reports.urls')),
     path('api/v1/chatbot/', include('chatbot.urls')),
+    path('api/v1/rag/', include('rag.urls')),
 ]
 
 if settings.DEBUG:
