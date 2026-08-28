@@ -10,15 +10,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 def _csv_env(name, default=''):
-    """Parse a comma-separated env var, dropping empty/whitespace entries.
-
-    ``''.split(',')`` is ``['']`` (not ``[]``), which silently broke
-    ``ALLOWED_HOSTS``/``CORS_ALLOWED_ORIGINS`` when the var was unset.
-    """
+    """Parse a comma-separated env var, dropping empty/whitespace entries."""
     return [entry.strip() for entry in os.environ.get(name, default).split(',') if entry.strip()]
 
 
-# Fail loudly on a missing key — a default secret is a total compromise.
 SECRET_KEY = os.environ['SECRET_KEY']
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = _csv_env('ALLOWED_HOSTS')
@@ -37,7 +32,6 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'drf_spectacular',
-    
 
     'core',
     'users',
@@ -47,8 +41,8 @@ INSTALLED_APPS = [
     'notifications',
     'reading_history',
     'reports',
-    'chatbot',
-    'rag',
+
+    'rag_langchain',
 ]
 
 MIDDLEWARE = [
@@ -84,14 +78,12 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 if os.environ.get('DATABASE_URL'):
-    # Railway/PaaS provide a single DATABASE_URL connection string.
     DATABASES = {
         'default': dj_database_url.parse(
             os.environ['DATABASE_URL'], conn_max_age=600
         ),
     }
 else:
-    # Local development: individual DB_* variables.
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -126,6 +118,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 CORS_ALLOWED_ORIGINS = _csv_env('CORS_ALLOWED_ORIGINS')
+# Make sure this includes your frontend URL, e.g.:
+# CORS_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173']
 CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
@@ -154,19 +148,17 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
         'user': '1000/hour',
-        # Chatbot costs money per call — strict per-user cap.
         'chatbot': '20/hour',
     },
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(seconds=int(os.environ.get('JWT_ACCESS_TOKEN_LIFETIME', 300))),
+    'ACCESS_TOKEN_LIFETIME': timedelta(seconds=int(os.environ.get('JWT_ACCESS_TOKEN_LIFETIME', 3600))),
     'REFRESH_TOKEN_LIFETIME': timedelta(seconds=int(os.environ.get('JWT_REFRESH_TOKEN_LIFETIME', 86400))),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
     'ALGORITHM': 'HS256',
-    # Distinct signing key so rotating SECRET_KEY does not force-invalidate JWTs.
     'SIGNING_KEY': os.environ.get('JWT_SIGNING_KEY', SECRET_KEY),
     'VERIFYING_KEY': None,
     'AUTH_HEADER_TYPES': ('Bearer',),
@@ -183,17 +175,32 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
-# Anthropic API Key
-ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
-USE_MOCK_CHATBOT = os.environ.get('USE_MOCK_CHATBOT', 'False') == 'True'
-
-# RAG / vector search — ChromaDB (embedded) + Ollama embeddings.
+# -------------------------------------------------------------------
+# RAG settings – pgvector + LangChain
+# -------------------------------------------------------------------
 OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 OLLAMA_EMBED_MODEL = os.environ.get('OLLAMA_EMBED_MODEL', 'nomic-embed-text')
 OLLAMA_CHAT_MODEL = os.environ.get('OLLAMA_CHAT_MODEL', 'qwen2.5:1.5b')
-RAG_MIN_SIMILARITY = float(os.environ.get('RAG_MIN_SIMILARITY', '0.45'))
-CHROMA_PERSIST_DIR = os.environ.get('CHROMA_PERSIST_DIR') or str(BASE_DIR / 'chroma_data')
 
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+USE_MOCK_CHATBOT = os.environ.get('USE_MOCK_CHATBOT', 'False') == 'True'
+
+PGVECTOR_COLLECTION_NAME = os.environ.get('PGVECTOR_COLLECTION_NAME', 'article_chunks')
+RAG_TOP_K = int(os.environ.get('RAG_TOP_K', '5'))
+RAG_MIN_SIMILARITY = float(os.environ.get('RAG_MIN_SIMILARITY', '0.2'))   # lowered for testing
+CHUNK_SIZE = int(os.environ.get('CHUNK_SIZE', '800'))
+CHUNK_OVERLAP = int(os.environ.get('CHUNK_OVERLAP', '100'))
+
+from urllib.parse import quote_plus
+DB = DATABASES['default']
+PGVECTOR_CONNECTION_STRING = (
+    f"postgresql+psycopg://{DB['USER']}:{quote_plus(DB['PASSWORD'])}"
+    f"@{DB['HOST']}:{DB['PORT']}/{DB['NAME']}"
+)
+
+# -------------------------------------------------------------------
+# Logging
+# -------------------------------------------------------------------
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

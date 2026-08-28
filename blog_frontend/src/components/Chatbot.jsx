@@ -1,11 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { endpoints } from '../config/api';
-import apiClient from '../utils/apiClient';
 import '../styles/chatbot.css';
 
 export default function Chatbot({ onClose }) {
-  const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -14,8 +10,28 @@ export default function Chatbot({ onClose }) {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-
   useEffect(scrollToBottom, [messages]);
+
+  const refreshAccessToken = async () => {
+    const refresh = localStorage.getItem('refresh');
+    if (!refresh) throw new Error('No refresh token');
+    const res = await fetch('/api/v1/auth/refresh/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh }),
+    });
+    if (!res.ok) {
+      localStorage.removeItem('access');
+      localStorage.removeItem('refresh');
+      throw new Error('Refresh failed – please log in again.');
+    }
+    const data = await res.json();
+    localStorage.setItem('access', data.access);
+    if (data.refresh) {
+      localStorage.setItem('refresh', data.refresh);
+    }
+    return data.access;
+  };
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -27,21 +43,85 @@ export default function Chatbot({ onClose }) {
     setLoading(true);
 
     try {
-      const response = await apiClient(endpoints.chatbot, {
+      let token = localStorage.getItem('access');
+      if (!token) throw new Error('No access token');
+
+      let response = await fetch('/api/v1/rag/chat/stream/', {
         method: 'POST',
-        body: JSON.stringify({
-          message: input,
-          history: messages.map(m => ({ role: m.role, content: m.content })),
-        }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ message: input }),
       });
 
-      if (!response.ok) throw new Error('Network response was not ok');
-      const data = await response.json();
+      if (response.status === 401) {
+        try {
+          token = await refreshAccessToken();
+          response = await fetch('/api/v1/rag/chat/stream/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ message: input }),
+          });
+        } catch (refreshError) {
+          throw new Error(refreshError.message);
+        }
+      }
 
-      setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`HTTP ${response.status}: ${text}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = '';
+      let buffer = '';
+
+      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonStr = line.slice(5).trim();
+              const data = JSON.parse(jsonStr);
+              if (data.type === 'chunk') {
+                assistantMessage += data.content;
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  newMessages[newMessages.length - 1] = {
+                    role: 'assistant',
+                    content: assistantMessage,
+                  };
+                  return newMessages;
+                });
+              } else if (data.type === 'error') {
+                throw new Error(data.error);
+              }
+            } catch (err) {
+              console.warn('Parse error:', err, 'line:', line);
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error('Chatbot error:', error);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, an error occurred. Please try again.' }]);
+      setMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: error.message || 'Sorry, an error occurred.' },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -56,7 +136,7 @@ export default function Chatbot({ onClose }) {
       <div className="chatbot-messages">
         {messages.length === 0 && (
           <div className="chatbot-welcome">
-            <p>Hello! I can answer questions about articles, authors, tags, and more.</p>
+            <p>Hello! Ask me about articles, authors, tags, and more.</p>
           </div>
         )}
         {messages.map((msg, idx) => (
@@ -79,7 +159,9 @@ export default function Chatbot({ onClose }) {
           placeholder="Ask something..."
           disabled={loading}
         />
-        <button type="submit" disabled={loading || !input.trim()}>Send</button>
+        <button type="submit" disabled={loading || !input.trim()}>
+          Send
+        </button>
       </form>
     </div>
   );
