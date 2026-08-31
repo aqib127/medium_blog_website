@@ -143,6 +143,7 @@ def get_chat_model():
             base_url=settings.OLLAMA_BASE_URL,
             temperature=0.3,
             streaming=True,
+            # //add api key vARIABLES fr=or online access
         )
 
 def build_rag_chain():

@@ -5,4 +5,5 @@ def get_embeddings():
     return OllamaEmbeddings(
         model=settings.OLLAMA_EMBED_MODEL,
         base_url=settings.OLLAMA_BASE_URL,
+        # add api key variable for online accesss
     )
