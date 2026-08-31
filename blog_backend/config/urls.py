@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
@@ -8,7 +9,19 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+
+def health_check(request):
+    return JsonResponse({
+        "status": "ok",
+        "service": "Medium Blog API",
+    })
+
+
 urlpatterns = [
+    # Health check
+    path('', health_check, name='health-check'),
+
+    # Admin
     path('admin/', admin.site.urls),
 
     # Auth
@@ -27,7 +40,7 @@ urlpatterns = [
     path('api/v1/history/', include('reading_history.urls')),
     path('api/v1/reports/', include('reports.urls')),
 
-    # New RAG endpoint – LangChain + pgvector with streaming
+    # RAG endpoint
     path('api/v1/rag/', include('rag_langchain.urls')),
 
     # OpenAPI schema
@@ -36,6 +49,7 @@ urlpatterns = [
         SpectacularAPIView.as_view(),
         name='schema',
     ),
+
     # Swagger UI
     path(
         'api/docs/',
@@ -43,6 +57,7 @@ urlpatterns = [
         name='swagger-ui',
     ),
 ]
+
 
 if settings.DEBUG:
     urlpatterns += static(
