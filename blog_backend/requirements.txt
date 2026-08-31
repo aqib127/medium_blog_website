@@ -43,7 +43,7 @@ greenlet==3.5.5
 
 # Configuration
 python-dotenv==1.0.0
-PyYAML==6.0.30
+PyYAML==6.0.3
 
 # HTTP / Networking
 requests==2.34.2
@@ -71,6 +71,7 @@ pydantic-settings==2.15.0
 pydantic-core==2.46.4
 orjson==3.12.0
 
+
 # Utilities
 PyJWT==2.13.0
 bcrypt==5.0.0
@@ -80,4 +81,3 @@ tenacity==9.1.4
 typing-extensions==4.16.0
 packaging==26.3
 filelock==3.32.4
-```
