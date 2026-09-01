@@ -4,27 +4,21 @@ from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
 
-# Load .env for local development (ignored on Railway)
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 def _csv_env(name, default=''):
-    """Parse a comma-separated env var, dropping empty/whitespace entries."""
     return [entry.strip() for entry in os.environ.get(name, default).split(',') if entry.strip()]
 
 
-# ------------------- SECURITY & HOSTS -------------------
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production')
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'   # default False on Railway
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-# ALLOWED_HOSTS: always include Railway domain + custom entries from env
 ALLOWED_HOSTS = ['.railway.app', 'localhost', '127.0.0.1']
-ALLOWED_HOSTS += _csv_env('ALLOWED_HOSTS')  # additional custom domains
+ALLOWED_HOSTS += _csv_env('ALLOWED_HOSTS')
 
-
-# ------------------- INSTALLED APPS -------------------
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -48,15 +42,13 @@ INSTALLED_APPS = [
     'notifications',
     'reading_history',
     'reports',
-
     'rag_langchain',
 ]
 
-# ------------------- MIDDLEWARE -------------------
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',          # CORS first
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',     # Static files
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -85,9 +77,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-
-# ------------------- DATABASE (Railway-ready) -------------------
-# Prefer DATABASE_URL (Railway sets this automatically)
 if os.environ.get('DATABASE_URL'):
     DATABASES = {
         'default': dj_database_url.parse(
@@ -95,7 +84,6 @@ if os.environ.get('DATABASE_URL'):
         ),
     }
 else:
-    # Fallback for local dev
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -107,8 +95,6 @@ else:
         }
     }
 
-
-# ------------------- AUTH & VALIDATORS -------------------
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -121,11 +107,8 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-
-# ------------------- STATIC & MEDIA FILES -------------------
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-# Use Whitenoise with compression & cache busting (required for Railway)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
@@ -134,15 +117,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
-
-# ------------------- CORS & CSRF -------------------
 CORS_ALLOWED_ORIGINS = _csv_env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173')
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = _csv_env('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173')
 
-
-# ------------------- DRF & JWT -------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -196,12 +175,10 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
-
-# ------------------- RAG / LangChain Settings -------------------
+# RAG settings
 OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 OLLAMA_EMBED_MODEL = os.environ.get('OLLAMA_EMBED_MODEL', 'nomic-embed-text')
 OLLAMA_CHAT_MODEL = os.environ.get('OLLAMA_CHAT_MODEL', 'qwen2.5:1.5b')
-
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 USE_MOCK_CHATBOT = os.environ.get('USE_MOCK_CHATBOT', 'False') == 'True'
 
@@ -211,17 +188,14 @@ RAG_MIN_SIMILARITY = float(os.environ.get('RAG_MIN_SIMILARITY', '0.2'))
 CHUNK_SIZE = int(os.environ.get('CHUNK_SIZE', '800'))
 CHUNK_OVERLAP = int(os.environ.get('CHUNK_OVERLAP', '100'))
 
-# ---------- Build PGVECTOR connection string robustly ----------
-# Works whether DATABASE_URL or individual DB_* vars are used.
+# PGVECTOR connection string (robust)
 db = DATABASES['default']
-# Extract credentials safely (supports both dj_database_url dict and manual dict)
 pg_user = db.get('USER') or os.environ.get('DB_USER', '')
 pg_password = db.get('PASSWORD') or os.environ.get('DB_PASSWORD', '')
 pg_host = db.get('HOST') or os.environ.get('DB_HOST', 'localhost')
 pg_port = db.get('PORT') or os.environ.get('DB_PORT', '5432')
 pg_name = db.get('NAME') or os.environ.get('DB_NAME', 'blog_db')
 
-# Encode password for URL (if present)
 from urllib.parse import quote_plus
 if pg_password:
     pg_password = quote_plus(pg_password)
@@ -230,8 +204,7 @@ PGVECTOR_CONNECTION_STRING = (
     f"postgresql+psycopg://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_name}"
 )
 
-
-# ------------------- LOGGING (Railway console) -------------------
+# Logging
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
