@@ -4,6 +4,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import dj_database_url
 
+# Load .env for local development (ignored on Railway)
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -14,10 +15,16 @@ def _csv_env(name, default=''):
     return [entry.strip() for entry in os.environ.get(name, default).split(',') if entry.strip()]
 
 
-SECRET_KEY = os.environ['SECRET_KEY']
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = _csv_env('ALLOWED_HOSTS')
+# ------------------- SECURITY & HOSTS -------------------
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-me-in-production')
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'   # default False on Railway
 
+# ALLOWED_HOSTS: always include Railway domain + custom entries from env
+ALLOWED_HOSTS = ['.railway.app', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS += _csv_env('ALLOWED_HOSTS')  # additional custom domains
+
+
+# ------------------- INSTALLED APPS -------------------
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -45,10 +52,11 @@ INSTALLED_APPS = [
     'rag_langchain',
 ]
 
+# ------------------- MIDDLEWARE -------------------
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',          # CORS first
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',     # Static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -77,13 +85,17 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+
+# ------------------- DATABASE (Railway-ready) -------------------
+# Prefer DATABASE_URL (Railway sets this automatically)
 if os.environ.get('DATABASE_URL'):
     DATABASES = {
         'default': dj_database_url.parse(
-            os.environ['DATABASE_URL'], conn_max_age=600
+            os.environ['DATABASE_URL'], conn_max_age=600, ssl_require=True
         ),
     }
 else:
+    # Fallback for local dev
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -95,6 +107,8 @@ else:
         }
     }
 
+
+# ------------------- AUTH & VALIDATORS -------------------
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -107,23 +121,28 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
+
+# ------------------- STATIC & MEDIA FILES -------------------
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Use Whitenoise with compression & cache busting (required for Railway)
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
 AUTH_USER_MODEL = 'users.User'
 
-CORS_ALLOWED_ORIGINS = _csv_env('CORS_ALLOWED_ORIGINS')
-# Make sure this includes your frontend URL, e.g.:
-# CORS_ALLOWED_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173']
+
+# ------------------- CORS & CSRF -------------------
+CORS_ALLOWED_ORIGINS = _csv_env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173')
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = _csv_env( 'CSRF_TRUSTED_ORIGINS' )
+CSRF_TRUSTED_ORIGINS = _csv_env('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173')
 
+
+# ------------------- DRF & JWT -------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -177,9 +196,8 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
 }
 
-# -------------------------------------------------------------------
-# RAG settings – pgvector + LangChain
-# -------------------------------------------------------------------
+
+# ------------------- RAG / LangChain Settings -------------------
 OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
 OLLAMA_EMBED_MODEL = os.environ.get('OLLAMA_EMBED_MODEL', 'nomic-embed-text')
 OLLAMA_CHAT_MODEL = os.environ.get('OLLAMA_CHAT_MODEL', 'qwen2.5:1.5b')
@@ -189,20 +207,31 @@ USE_MOCK_CHATBOT = os.environ.get('USE_MOCK_CHATBOT', 'False') == 'True'
 
 PGVECTOR_COLLECTION_NAME = os.environ.get('PGVECTOR_COLLECTION_NAME', 'article_chunks')
 RAG_TOP_K = int(os.environ.get('RAG_TOP_K', '5'))
-RAG_MIN_SIMILARITY = float(os.environ.get('RAG_MIN_SIMILARITY', '0.2'))   # lowered for testing
+RAG_MIN_SIMILARITY = float(os.environ.get('RAG_MIN_SIMILARITY', '0.2'))
 CHUNK_SIZE = int(os.environ.get('CHUNK_SIZE', '800'))
 CHUNK_OVERLAP = int(os.environ.get('CHUNK_OVERLAP', '100'))
 
+# ---------- Build PGVECTOR connection string robustly ----------
+# Works whether DATABASE_URL or individual DB_* vars are used.
+db = DATABASES['default']
+# Extract credentials safely (supports both dj_database_url dict and manual dict)
+pg_user = db.get('USER') or os.environ.get('DB_USER', '')
+pg_password = db.get('PASSWORD') or os.environ.get('DB_PASSWORD', '')
+pg_host = db.get('HOST') or os.environ.get('DB_HOST', 'localhost')
+pg_port = db.get('PORT') or os.environ.get('DB_PORT', '5432')
+pg_name = db.get('NAME') or os.environ.get('DB_NAME', 'blog_db')
+
+# Encode password for URL (if present)
 from urllib.parse import quote_plus
-DB = DATABASES['default']
+if pg_password:
+    pg_password = quote_plus(pg_password)
+
 PGVECTOR_CONNECTION_STRING = (
-    f"postgresql+psycopg://{DB['USER']}:{quote_plus(DB['PASSWORD'])}"
-    f"@{DB['HOST']}:{DB['PORT']}/{DB['NAME']}"
+    f"postgresql+psycopg://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_name}"
 )
 
-# -------------------------------------------------------------------
-# Logging
-# -------------------------------------------------------------------
+
+# ------------------- LOGGING (Railway console) -------------------
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
