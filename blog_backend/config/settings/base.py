@@ -168,6 +168,10 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://backend-production-b4f9d.up.railway.app',
+]
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Blog API',
     'DESCRIPTION': 'A Medium-like blogging platform API',

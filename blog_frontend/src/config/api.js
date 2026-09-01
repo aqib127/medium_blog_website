@@ -1,44 +1,53 @@
-// Use environment variable, fallback to localhost:8000
 const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1/';
 
+const normalizedBase = baseURL.endsWith('/') ? baseURL : baseURL + '/';
+
 export const endpoints = {
-  register: `${baseURL}auth/register/`,
-  login: `${baseURL}auth/login/`,
-  refresh: `${baseURL}auth/refresh/`,
-  verify: `${baseURL}auth/verify/`,
-  me: `${baseURL}auth/me/`,
-  logout: `${baseURL}auth/logout/`,
 
-  users: (handle) => `${baseURL}users/${handle}/`,
-  userStories: (handle) => `${baseURL}users/${handle}/stories/`,
-  userFollowers: (handle) => `${baseURL}users/${handle}/followers/`,
-  userFollowing: (handle) => `${baseURL}users/${handle}/following/`,
-  userFollow: (handle) => `${baseURL}users/${handle}/follow/`,
-  userUpdate: (handle) => `${baseURL}users/${handle}/update/`,
-  userAvatar: (handle) => `${baseURL}users/${handle}/avatar/`,
+  register: `${normalizedBase}auth/register/`,
+  login: `${normalizedBase}auth/login/`,
+  refresh: `${normalizedBase}auth/refresh/`,
+  verify: `${normalizedBase}auth/verify/`,
+  me: `${normalizedBase}auth/me/`,
+  logout: `${normalizedBase}auth/logout/`,
 
-  articles: `${baseURL}articles/`,
-  article: (id) => `${baseURL}articles/${id}/`,
-  clap: (id) => `${baseURL}articles/${id}/clap/`,
-  featured: `${baseURL}articles/featured/`,
-  trending: `${baseURL}articles/trending/`,
+  // Users
+  users: (handle) => `${normalizedBase}users/${handle}/`,
+  userStories: (handle) => `${normalizedBase}users/${handle}/stories/`,
+  userFollowers: (handle) => `${normalizedBase}users/${handle}/followers/`,
+  userFollowing: (handle) => `${normalizedBase}users/${handle}/following/`,
+  userFollow: (handle) => `${normalizedBase}users/${handle}/follow/`,
+  userUpdate: (handle) => `${normalizedBase}users/${handle}/update/`,
+  userAvatar: (handle) => `${normalizedBase}users/${handle}/avatar/`,
 
-  comments: `${baseURL}comments/`,
-  commentList: (articleId) => `${baseURL}comments/?article=${articleId}`,
+  // Articles
+  articles: `${normalizedBase}articles/`,
+  article: (id) => `${normalizedBase}articles/${id}/`,
+  clap: (id) => `${normalizedBase}articles/${id}/clap/`,
+  featured: `${normalizedBase}articles/featured/`,
+  trending: `${normalizedBase}articles/trending/`,
 
-  bookmarks: `${baseURL}bookmarks/`,
-  bookmark: (articleId) => `${baseURL}bookmarks/${articleId}/`,
+  // Comments
+  comments: `${normalizedBase}comments/`,
+  commentList: (articleId) => `${normalizedBase}comments/?article=${articleId}`,
 
-  notifications: `${baseURL}notifications/`,
-  notificationRead: (id) => `${baseURL}notifications/${id}/read/`,
-  notificationReadAll: `${baseURL}notifications/read_all/`,
+  // Bookmarks
+  bookmarks: `${normalizedBase}bookmarks/`,
+  bookmark: (articleId) => `${normalizedBase}bookmarks/${articleId}/`,
 
-  history: `${baseURL}history/`,
-  reports: `${baseURL}reports/`,
+  // Notifications
+  notifications: `${normalizedBase}notifications/`,
+  notificationRead: (id) => `${normalizedBase}notifications/${id}/read/`,
+  notificationReadAll: `${normalizedBase}notifications/read_all/`,
 
-  tags: `${baseURL}articles/tags/`,
-  // FIXED: use tags__slug (double underscore) for Django filter
-  tagArticles: (slug) => `${baseURL}articles/?tags__slug=${slug}`,
+  // History & Reports
+  history: `${normalizedBase}history/`,
+  reports: `${normalizedBase}reports/`,
 
-  chatbot: `${baseURL}chatbot/`,
+  // Tags
+  tags: `${normalizedBase}articles/tags/`,
+  tagArticles: (slug) => `${normalizedBase}articles/?tags__slug=${slug}`,
+
+  // ✅ CHATBOT FIXED: Points to the correct Django endpoint
+  chatbot: `${normalizedBase}rag/chat/stream/`,
 };

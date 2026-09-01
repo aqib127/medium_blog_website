@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import '../styles/chatbot.css';
+import { endpoints } from '../config/api';   // ✅ IMPORT THIS
 
 export default function Chatbot({ onClose }) {
   const [messages, setMessages] = useState([]);
@@ -15,7 +16,8 @@ export default function Chatbot({ onClose }) {
   const refreshAccessToken = async () => {
     const refresh = localStorage.getItem('refresh');
     if (!refresh) throw new Error('No refresh token');
-    const res = await fetch('/api/v1/auth/refresh/', {
+    // ✅ FIXED: Use endpoints.refresh
+    const res = await fetch(endpoints.refresh, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh }),
@@ -46,7 +48,8 @@ export default function Chatbot({ onClose }) {
       let token = localStorage.getItem('access');
       if (!token) throw new Error('No access token');
 
-      let response = await fetch('/api/v1/rag/chat/stream/', {
+      // ✅ FIXED: Use endpoints.chatbot
+      let response = await fetch(endpoints.chatbot, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +61,8 @@ export default function Chatbot({ onClose }) {
       if (response.status === 401) {
         try {
           token = await refreshAccessToken();
-          response = await fetch('/api/v1/rag/chat/stream/', {
+          // ✅ FIXED: Use endpoints.chatbot
+          response = await fetch(endpoints.chatbot, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
