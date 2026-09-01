@@ -11,7 +11,7 @@ if [ "${USE_S3:-False}" != "True" ]; then
 fi
 
 # Start Gunicorn
-gunicorn config.wsgi:application \
+exec gunicorn config.wsgi:application \
     --bind "0.0.0.0:${PORT:-8000}" \
     --workers 3 \
     --timeout 120
