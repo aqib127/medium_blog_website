@@ -3,16 +3,14 @@ frontend:
   phases:
     preBuild:
       commands:
-        - cd Blog
         - npm install
     build:
       commands:
-        - cd Blog
         - npm run build
   artifacts:
-    baseDirectory: Blog/dist
+    baseDirectory: dist
     files:
       - '**/*'
   cache:
     paths:
-      - Blog/node_modules/**/*
+      - node_modules/**/*
