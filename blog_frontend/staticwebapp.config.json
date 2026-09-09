@@ -3,11 +3,24 @@
     {
       "route": "/api/v1/*",
       "proxy": {
+        "backendUrl": "https://medium-blog-backend-dsdffvf9hugchhfg.centralus-01.azurewebsites.net",
+        "forwardingScheme": "https",
+        "headers": {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization"
+        }
+      }
+    },
+    {
+      "route": "/media/*",
+      "proxy": {
         "backendUrl": "https://medium-blog-backend-dsdffvf9hugchhfg.centralus-01.azurewebsites.net"
       }
     }
   ],
   "navigationFallback": {
-    "rewrite": "/index.html"
+    "rewrite": "/index.html",
+    "exclude": ["/api/*", "/images/*", "/css/*", "/js/*", "/assets/*"]
   }
 }
