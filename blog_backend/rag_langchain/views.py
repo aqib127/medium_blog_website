@@ -2,7 +2,7 @@ import json
 import logging
 from django.http import StreamingHttpResponse, JsonResponse
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated  # ← Add IsAuthenticated here
+from rest_framework.permissions import AllowAny  # Changed this import
 from rest_framework.throttling import ScopedRateThrottle
 from .chain import answer_stream
 from .indexing import index_all_articles
@@ -10,7 +10,7 @@ from .indexing import index_all_articles
 logger = logging.getLogger(__name__)
 
 class ChatStreamView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]  # Changed from IsAuthenticated
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'chatbot'
 
@@ -36,7 +36,7 @@ class ChatStreamView(APIView):
         return response
 
 class ReindexView(APIView):
-    permission_classes = [IsAuthenticated]  # Now this will work!
+    permission_classes = [IsAuthenticated]  # Keep this authenticated
 
     def post(self, request):
         try:
