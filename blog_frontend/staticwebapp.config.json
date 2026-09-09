@@ -1,6 +1,13 @@
 {
+  "routes": [
+    {
+      "route": "/api/v1/*",
+      "proxy": {
+        "backendUrl": "https://medium-blog-backend-dsdffvf9hugchhfg.centralus-01.azurewebsites.net"
+      }
+    }
+  ],
   "navigationFallback": {
-    "rewrite": "/index.html",
-    "exclude": ["/images/*", "/css/*", "/js/*"]
+    "rewrite": "/index.html"
   }
 }
