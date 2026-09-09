@@ -8,9 +8,6 @@ const subscribeTokenRefresh = (cb) => {
   refreshSubscribers.push(cb);
 };
 
-// Every queued request must settle no matter how the refresh ends — the
-// invariant for a queue is that *every* path out of the critical section
-// drains it (success, failure, and exception alike).
 const onTokenRefreshed = (newToken) => {
   refreshSubscribers.forEach((cb) => cb.resolve(newToken));
   refreshSubscribers = [];
