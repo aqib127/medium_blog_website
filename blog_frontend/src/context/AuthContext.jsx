@@ -24,11 +24,23 @@ const extractErrors = (data) => {
 
 // Guard against a non-JSON body (e.g. an HTML error page from a proxy).
 const parseJson = async (res) => {
+  const contentType = res.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    // If it's not JSON, get the text to show in error
+    const text = await res.text();
+    return { _nonJson: true, _text: text, _status: res.status };
+  }
   try {
     return await res.json();
-  } catch {
-    return {};
+  } catch (e) {
+    return { _nonJson: true, _error: e.message };
   }
+};
+
+// Helper to check if response has JSON
+const isJsonResponse = (res) => {
+  const contentType = res.headers.get('content-type');
+  return contentType && contentType.includes('application/json');
 };
 
 export function AuthProvider({ children }) {
@@ -78,38 +90,74 @@ export function AuthProvider({ children }) {
 
   const signIn = async (email, password) => {
     try {
+      console.log('Attempting login to:', endpoints.login);
+      
       const res = await fetch(endpoints.login, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
+
+      console.log('Login response status:', res.status);
+      
+      // Check if response is JSON
+      if (!isJsonResponse(res)) {
+        const text = await res.text();
+        console.error('Non-JSON response:', text);
+        return { 
+          success: false, 
+          error: `Server error: ${res.status} - ${text.substring(0, 100)}` 
+        };
+      }
+
       const data = await parseJson(res);
+      
       if (!res.ok) {
         return { success: false, error: extractErrors(data) };
       }
+      
       storeAuth(data);
       return { success: true, user: data.user };
     } catch (error) {
-      return { success: false, error: error.message };
+      console.error('Sign in error:', error);
+      return { success: false, error: error.message || 'Network error occurred' };
     }
   };
 
   const signUp = async (email, name, password, handle = '') => {
     try {
+      console.log('Attempting registration to:', endpoints.register);
+      
       const res = await fetch(endpoints.register, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name, password, handle }),
       });
+
+      console.log('Registration response status:', res.status);
+      
+      // Check if response is JSON
+      if (!isJsonResponse(res)) {
+        const text = await res.text();
+        console.error('Non-JSON response:', text);
+        return { 
+          success: false, 
+          error: `Server error: ${res.status} - ${text.substring(0, 100)}` 
+        };
+      }
+
       const data = await parseJson(res);
+      
       if (!res.ok) {
         return { success: false, error: extractErrors(data) };
       }
+      
       // The register response already includes tokens + user — no second login.
       storeAuth(data);
       return { success: true, user: data.user };
     } catch (error) {
-      return { success: false, error: error.message };
+      console.error('Sign up error:', error);
+      return { success: false, error: error.message || 'Network error occurred' };
     }
   };
 
