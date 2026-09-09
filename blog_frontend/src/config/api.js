@@ -1,9 +1,9 @@
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1/';
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1/';
 
 const normalizedBase = baseURL.endsWith('/') ? baseURL : baseURL + '/';
 
 export const endpoints = {
-  // Auth
+  // Auth endpoints
   register: `${normalizedBase}auth/register/`,
   login: `${normalizedBase}auth/login/`,
   refresh: `${normalizedBase}auth/refresh/`,
@@ -48,7 +48,7 @@ export const endpoints = {
   tags: `${normalizedBase}articles/tags/`,
   tagArticles: (slug) => `${normalizedBase}articles/?tags__slug=${slug}`,
 
-  // Chatbot - Points to Django RAG endpoint
+  // Chatbot
   chatbot: `${normalizedBase}rag/chat/stream/`,
 };
 
