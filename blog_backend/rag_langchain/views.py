@@ -2,7 +2,7 @@ import json
 import logging
 from django.http import StreamingHttpResponse, JsonResponse
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny  # Changed this import
 from rest_framework.throttling import ScopedRateThrottle
 from .chain import answer_stream
 from .indexing import index_all_articles
@@ -10,7 +10,7 @@ from .indexing import index_all_articles
 logger = logging.getLogger(__name__)
 
 class ChatStreamView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]  # Changed from IsAuthenticated
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = 'chatbot'
 
@@ -23,7 +23,8 @@ class ChatStreamView(APIView):
         def event_stream():
             yield f"data: {json.dumps({'type': 'start'})}\n\n"
             try:
-                for chunk in answer_stream(query, user=request.user):
+                # We don't have a user now, so pass None or handle it
+                for chunk in answer_stream(query, user=None):
                     yield f"data: {json.dumps({'type': 'chunk', 'content': chunk})}\n\n"
                 yield f"data: {json.dumps({'type': 'end'})}\n\n"
             except Exception as e:
@@ -35,7 +36,7 @@ class ChatStreamView(APIView):
         return response
 
 class ReindexView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]  # Keep this authenticated
 
     def post(self, request):
         try:
