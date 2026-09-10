@@ -18,42 +18,12 @@ const onTokenRefreshFailed = (error) => {
   refreshSubscribers = [];
 };
 
-// Helper to safely parse JSON responses
-const safeParseJSON = async (response) => {
-  const text = await response.text();
-  if (!text) {
-    return {};
-  }
-  try {
-    return JSON.parse(text);
-  } catch {
-    // If it's not JSON, return the text as an error message
-    throw new Error(`Server error: ${response.status} - ${text.substring(0, 100)}`);
-  }
-};
-
-// Helper to handle non-JSON responses gracefully
-const handleResponse = async (response) => {
-  if (!response.ok) {
-    let errorMessage = `HTTP Error ${response.status}`;
-    try {
-      const errorData = await safeParseJSON(response);
-      if (errorData.detail) {
-        errorMessage = errorData.detail;
-      } else if (typeof errorData === 'object' && errorData.message) {
-        errorMessage = errorData.message;
-      } else if (typeof errorData === 'string') {
-        errorMessage = errorData;
-      }
-    } catch {
-      // If we can't parse the error, use the status text
-      errorMessage = response.statusText || errorMessage;
-    }
-    throw new Error(errorMessage);
-  }
-  return safeParseJSON(response);
-};
-
+/**
+ * apiClient — fetch-like wrapper with automatic JWT refresh.
+ *
+ * Returns the raw `Response` object (like `fetch`), so callers can use
+ * `res.ok`, `res.status`, `res.json()`, etc.
+ */
 const apiClient = async (endpoint, options = {}) => {
   // Get token from localStorage
   let token = localStorage.getItem('access');
@@ -100,7 +70,7 @@ const apiClient = async (endpoint, options = {}) => {
               ...options,
               headers,
             });
-            return handleResponse(retryRes);
+            return retryRes;   // ← Return raw Response
           } catch (error) {
             localStorage.removeItem('access');
             localStorage.removeItem('refresh');
@@ -121,7 +91,7 @@ const apiClient = async (endpoint, options = {}) => {
                     ...options,
                     headers,
                   });
-                  resolve(handleResponse(retryRes));
+                  resolve(retryRes);   // ← Return raw Response
                 } catch (err) {
                   reject(err);
                 }
@@ -132,10 +102,9 @@ const apiClient = async (endpoint, options = {}) => {
         }
       }
 
-      // For non-401 responses, handle normally
-      return handleResponse(response);
+      // For non-401 responses, return the raw Response
+      return response;   // ← Return raw Response
     } catch (error) {
-      // Network errors or other fetch errors
       console.error('API Client Error:', error);
       throw new Error(error.message || 'Network error occurred');
     }
