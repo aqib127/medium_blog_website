@@ -5,19 +5,20 @@ DEBUG = False
 
 # --- Azure Deployment Topology ---
 # Azure App Service terminates TLS at its proxy and forwards plain HTTP to gunicorn.
-# Without this, SECURE_SSL_REDIRECT loops on every request
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# Allowed Hosts - Azure domain + custom domain
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+# Allowed Hosts - allow Azure internal IPs, Azure subdomains, localhost, and any host
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '169.254.129.2', '*']
 _azure_domain = os.environ.get('WEBSITE_HOSTNAME')
 if _azure_domain:
     ALLOWED_HOSTS += [_azure_domain, f'.{_azure_domain}']
+ALLOWED_HOSTS += ['.azurewebsites.net']
 
 _custom_domain = os.environ.get('BACKEND_DOMAIN')
 if _custom_domain:
     ALLOWED_HOSTS += [_custom_domain]
 
+# CSRF trusted origins
 CSRF_TRUSTED_ORIGINS = []
 if _azure_domain:
     CSRF_TRUSTED_ORIGINS.append(f'https://{_azure_domain}')
@@ -38,18 +39,18 @@ if _frontend_url:
 if 'http://localhost:5173' not in CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS.append('http://localhost:5173')
 
+# Allow all origins for now (tighten later)
+CORS_ALLOW_ALL_ORIGINS = True
+
 # Serve static files via WhiteNoise
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
-# Security Headers
-SECURE_SSL_REDIRECT = True
+# Security Headers - disable SSL redirect to avoid startup probe redirect loops
+SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
 
 # Database - PostgreSQL with pgvector
 DATABASES = {
@@ -71,7 +72,7 @@ if os.environ.get('USE_AZURE_STORAGE', 'False') == 'True':
     AZURE_ACCOUNT_NAME = os.environ.get('AZURE_ACCOUNT_NAME')
     AZURE_ACCOUNT_KEY = os.environ.get('AZURE_ACCOUNT_KEY')
     AZURE_CONTAINER = os.environ.get('AZURE_CONTAINER', 'media')
-    
+
     STATICFILES_STORAGE = 'storages.backends.azure_storage.AzureStorage'
     DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
 
