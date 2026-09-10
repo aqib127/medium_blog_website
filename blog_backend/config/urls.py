@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
@@ -13,8 +13,14 @@ def health_check(request):
     })
 
 
+def azure_health_probe(request):
+    """Azure App Service startup probe endpoint - must return 200."""
+    return HttpResponse("ok", content_type="text/plain")
+
+
 urlpatterns = [
     path('', health_check, name='health-check'),
+    path('robots933456.txt', azure_health_probe, name='azure-health-probe'),
     path('admin/', admin.site.urls),
     path('api/v1/auth/', include('users.urls')),
     path('api/v1/users/', include('users.urls_profile')),
