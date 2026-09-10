@@ -25,7 +25,6 @@ export default function Home() {
   const buildUrl = (tagSlug, activeFeed) => {
     const params = new URLSearchParams();
     if (tagSlug) {
-      // Correct Django filter param: tags__slug
       params.set('tags__slug', tagSlug);
     }
     if (activeFeed === 'following') {
@@ -38,11 +37,10 @@ export default function Home() {
   const fetchArticles = async (tagSlug = null, activeFeed = feed) => {
     setLoading(true);
     try {
-      const res = await apiClient(buildUrl(tagSlug, activeFeed));
-      if (!res.ok) throw new Error(`Articles API error: ${res.status}`);
-      const data = await res.json();
-      // Always replace results — never append — so switching never mixes lists.
-      setArticles(data.results || data);
+      const data = await apiClient(buildUrl(tagSlug, activeFeed));
+      // apiClient returns parsed JSON — use .results if paginated
+      const results = data?.results ?? data ?? [];
+      setArticles(Array.isArray(results) ? results : []);
       setError(null);
     } catch (err) {
       console.error('[Home] Error fetching articles:', err);
@@ -55,14 +53,13 @@ export default function Home() {
   useEffect(() => {
     const fetchMeta = async () => {
       try {
-        const [featuredRes, tagsRes] = await Promise.all([
-          apiClient(endpoints.featured),
-          apiClient(endpoints.tags),
+        const [featuredData, tagsData] = await Promise.all([
+          apiClient(endpoints.featured).catch(() => null),
+          apiClient(endpoints.tags).catch(() => []),
         ]);
-        const featuredData = featuredRes.ok ? await featuredRes.json() : null;
-        const tagsData = tagsRes.ok ? await tagsRes.json() : [];
         setFeatured(featuredData);
-        setTags(tagsData.results || tagsData);
+        const tagsList = tagsData?.results ?? tagsData ?? [];
+        setTags(Array.isArray(tagsList) ? tagsList : []);
       } catch (err) {
         console.error('[Home] Error fetching meta data:', err);
       }
@@ -70,7 +67,6 @@ export default function Home() {
     fetchMeta();
   }, []);
 
-  // Re-fetch whenever the active tag or feed changes — replaces previous results.
   useEffect(() => {
     fetchArticles(activeTag, feed);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -118,7 +114,6 @@ export default function Home() {
         <main className="feed-main">
           <h2 className="feed-heading">{activeTag ? `#${activeTag}` : 'Latest'}</h2>
 
-          {/* Medium-style feed tabs: "For you" and (when signed in) "Following". */}
           <div className="feed-tabs" role="tablist" aria-label="Feed">
             {FEEDS.map(({ key, label }) => (
               <button
