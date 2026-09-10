@@ -37,8 +37,9 @@ export default function Home() {
   const fetchArticles = async (tagSlug = null, activeFeed = feed) => {
     setLoading(true);
     try {
-      const data = await apiClient(buildUrl(tagSlug, activeFeed));
-      // apiClient returns parsed JSON — use .results if paginated
+      const res = await apiClient(buildUrl(tagSlug, activeFeed));
+      if (!res.ok) throw new Error(`Articles API error: ${res.status}`);
+      const data = await res.json();
       const results = data?.results ?? data ?? [];
       setArticles(Array.isArray(results) ? results : []);
       setError(null);
@@ -53,10 +54,14 @@ export default function Home() {
   useEffect(() => {
     const fetchMeta = async () => {
       try {
-        const [featuredData, tagsData] = await Promise.all([
+        const [featuredRes, tagsRes] = await Promise.all([
           apiClient(endpoints.featured).catch(() => null),
-          apiClient(endpoints.tags).catch(() => []),
+          apiClient(endpoints.tags).catch(() => null),
         ]);
+
+        const featuredData = featuredRes?.ok ? await featuredRes.json() : null;
+        const tagsData = tagsRes?.ok ? await tagsRes.json() : [];
+
         setFeatured(featuredData);
         const tagsList = tagsData?.results ?? tagsData ?? [];
         setTags(Array.isArray(tagsList) ? tagsList : []);
