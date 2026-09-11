@@ -8,7 +8,7 @@ whitenoise==6.7.0
 gunicorn==21.2.0
 pgvector==0.2.5
 python-dotenv==1.0.0
-django-storages==1.14.4
+django-storages[azure]==1.14.4
 Pillow==10.4.0
 dj-database-url==2.1.0
 django-filter==23.4
@@ -17,3 +17,5 @@ langchain==0.3.7
 langchain-community==0.3.5
 langchain-postgres==0.0.12
 langchain-ollama==0.2.0
+azure-storage-blob==12.19.0
+azure-core==1.30.2

@@ -67,6 +67,15 @@ DATABASES = {
     }
 }
 
+# Azure Blob Storage for media files
+if os.environ.get('USE_AZURE_STORAGE', 'False') == 'True':
+    AZURE_ACCOUNT_NAME = os.environ.get('AZURE_ACCOUNT_NAME')
+    AZURE_ACCOUNT_KEY = os.environ.get('AZURE_ACCOUNT_KEY')
+    AZURE_CONTAINER = os.environ.get('AZURE_CONTAINER', 'media')
+
+    STATICFILES_STORAGE = 'storages.backends.azure_storage.AzureStorage'
+    DEFAULT_FILE_STORAGE = 'storages.backends.azure_storage.AzureStorage'
+
 # Ollama Configuration
 OLLAMA_API_URL = os.environ.get('OLLAMA_API_URL', 'http://localhost:11434/api')
 OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama2')

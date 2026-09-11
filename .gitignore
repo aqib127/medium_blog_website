@@ -32,3 +32,6 @@ Thumbs.db
 # Misc
 *.bak
 *.tmp
+AZURE_STORAGE_CREDENTIALS.txt
+*.credentials.txt
+azure-app-settings.json
