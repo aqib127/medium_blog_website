@@ -195,10 +195,8 @@ class AvatarUpdateView(APIView):
             data = request.data
             if data.get('avatar') is None:
                 if user.avatar:
-                    try:
-                        user.avatar.delete(save=False)
-                    except Exception:
-                        pass
+                    if os.path.isfile(user.avatar.path):
+                        os.remove(user.avatar.path)
                     user.avatar = None
                     user.save(update_fields=['avatar'])
                 return Response({'avatar_url': None})
@@ -214,21 +212,7 @@ class AvatarUpdateView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Delete old avatar if exists (works with local + Azure Blob)
-        if user.avatar:
-            try:
-                user.avatar.delete(save=False)
-            except Exception:
-                pass
-
         user.avatar = request.FILES['avatar']
         user.save()
-        
-        # Build correct URL for Azure Blob Storage
-        avatar_url = user.avatar.url if user.avatar else None
-        
-        # If not absolute, use build_absolute_uri
-        if avatar_url and not avatar_url.startswith('http'):
-            avatar_url = request.build_absolute_uri(avatar_url)
-        
+        avatar_url = request.build_absolute_uri(user.avatar.url) if user.avatar else None
         return Response({'avatar_url': avatar_url})

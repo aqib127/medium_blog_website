@@ -39,10 +39,8 @@ class User(AbstractUser, BaseModel):
             try:
                 old_instance = User.objects.get(pk=self.pk)
                 if old_instance.avatar and old_instance.avatar != self.avatar:
-                    try:
-                        old_instance.avatar.delete(save=False)
-                    except Exception:
-                        pass  # Ignore delete errors
+                    if os.path.isfile(old_instance.avatar.path):
+                        os.remove(old_instance.avatar.path)
             except User.DoesNotExist:
                 pass
 

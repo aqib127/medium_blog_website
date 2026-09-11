@@ -43,7 +43,6 @@ if 'http://localhost:5173' not in CORS_ALLOWED_ORIGINS:
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Serve static files via WhiteNoise
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Security Headers - disable SSL redirect to avoid startup probe redirect loops
 SECURE_SSL_REDIRECT = False
