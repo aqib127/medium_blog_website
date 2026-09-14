@@ -4,10 +4,9 @@ from .base import *
 DEBUG = False
 
 # --- Azure Deployment Topology ---
-# Azure App Service terminates TLS at its proxy and forwards plain HTTP to gunicorn.
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# Allowed Hosts - allow Azure internal IPs, Azure subdomains, localhost, and any host
+# Allowed Hosts
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '169.254.129.2', '*']
 _azure_domain = os.environ.get('WEBSITE_HOSTNAME')
 if _azure_domain:
@@ -29,7 +28,7 @@ for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(','):
     if origin:
         CSRF_TRUSTED_ORIGINS.append(origin)
 
-# CORS: React frontend runs on a separate origin
+# CORS
 CORS_ALLOWED_ORIGINS = [
     o for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()
 ]
@@ -39,19 +38,16 @@ if _frontend_url:
 if 'http://localhost:5173' not in CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS.append('http://localhost:5173')
 
-# Allow all origins for now (tighten later)
-CORS_ALLOW_ALL_ORIGINS = True
+# ❌ REMOVED: CORS_ALLOW_ALL_ORIGINS = True  (security risk in production)
 
-# Serve static files via WhiteNoise
-
-# Security Headers - disable SSL redirect to avoid startup probe redirect loops
+# Security
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
-# Database - PostgreSQL with pgvector
+# Database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -66,29 +62,52 @@ DATABASES = {
     }
 }
 
-# Ollama Configuration
+# ============================================================
+# LLM Configuration (Ollama + Azure OpenAI)
+# ============================================================
+
+# Ollama
 OLLAMA_API_URL = os.environ.get('OLLAMA_API_URL', 'http://localhost:11434/api')
-OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'llama2')
+OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434')
+OLLAMA_HOST = os.environ.get('OLLAMA_HOST') or OLLAMA_BASE_URL
+
+# Model selection
+OLLAMA_MODEL = os.environ.get('OLLAMA_MODEL', 'qwen2.5:1.5b')
+OLLAMA_CHAT_MODEL = os.environ.get('OLLAMA_CHAT_MODEL', 'qwen2.5:1.5b')
+OLLAMA_EMBED_MODEL = os.environ.get('OLLAMA_EMBED_MODEL', 'nomic-embed-text')
+
+# Azure OpenAI (optional)
+AZURE_OPENAI_ENDPOINT = os.environ.get('AZURE_OPENAI_ENDPOINT', '')
+AZURE_OPENAI_API_KEY = os.environ.get('AZURE_OPENAI_API_KEY', '')
+AZURE_OPENAI_API_VERSION = os.environ.get('AZURE_OPENAI_API_VERSION', '2024-08-01-preview')
+AZURE_OPENAI_DEPLOYMENT = os.environ.get('AZURE_OPENAI_DEPLOYMENT', 'gpt-4o-mini')
+
+# RAG
+RAG_MIN_SIMILARITY = float(os.environ.get('RAG_MIN_SIMILARITY', '0.2'))
+RAG_TOP_K = int(os.environ.get('RAG_TOP_K', '5'))
+
+# Mock toggle
+USE_MOCK_CHATBOT = os.environ.get('USE_MOCK_CHATBOT', 'False') == 'True'
 
 # Logging
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
+        'console': {'class': 'logging.StreamHandler'},
     },
     'loggers': {
-        'django': {
+        'django': {'handlers': ['console'], 'level': 'ERROR', 'propagate': True},
+        'rag_langchain': {
             'handlers': ['console'],
-            'level': 'ERROR',
-            'propagate': True,
+            'level': os.environ.get('LOG_LEVEL', 'INFO'),
+            'propagate': False,
         },
     },
 }
+
 # ============================================================
-# Azure Blob Storage for media files
+# Azure Blob Storage
 # ============================================================
 USE_AZURE_STORAGE = os.environ.get('USE_AZURE_STORAGE', 'False') == 'True'
 

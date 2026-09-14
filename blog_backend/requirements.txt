@@ -19,3 +19,6 @@ langchain-postgres==0.0.12
 langchain-ollama==0.2.0
 azure-storage-blob==12.19.0
 azure-core==1.30.2
+openai>=1.40.0
+ollama>=0.3.0
+tiktoken>=0.7.0

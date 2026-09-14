@@ -1,0 +1,68 @@
+/* ============================================================
+   Chatbot Action Cards (new)
+   ============================================================ */
+
+.chatbot-action-block {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chatbot-action-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  border-left: 3px solid #1F4E4A;
+  background: #f5f7f7;
+}
+
+.chatbot-action-item.success {
+  border-left-color: #1F4E4A;
+  background: #f0f7f5;
+}
+
+.chatbot-action-item.error {
+  border-left-color: #c0392b;
+  background: #fdf2f1;
+}
+
+.chatbot-action-link {
+  color: #1F4E4A;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.chatbot-action-link:hover {
+  text-decoration: underline;
+}
+
+.chatbot-action-meta {
+  color: #888;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.chatbot-action-list {
+  margin: 6px 0 0 0;
+  padding-left: 20px;
+  list-style-type: disc;
+}
+
+.chatbot-action-list li {
+  margin-bottom: 3px;
+  font-size: 13px;
+}
+
+.chatbot-examples {
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #555;
+}
+
+.chatbot-examples li {
+  margin-bottom: 3px;
+  font-style: italic;
+}
