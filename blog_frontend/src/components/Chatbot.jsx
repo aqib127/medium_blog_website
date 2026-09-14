@@ -18,27 +18,28 @@ export default function Chatbot({ onClose }) {
   const refreshAccessToken = async () => {
     const refresh = localStorage.getItem('refresh');
     if (!refresh) throw new Error('No refresh token');
+
     const res = await fetch(endpoints.refresh, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh }),
     });
+
     if (!res.ok) {
       localStorage.removeItem('access');
       localStorage.removeItem('refresh');
       throw new Error('Refresh failed – please log in again.');
     }
+
     const data = await res.json();
     localStorage.setItem('access', data.access);
-    if (data.refresh) {
-      localStorage.setItem('refresh', data.refresh);
-    }
+    if (data.refresh) localStorage.setItem('refresh', data.refresh);
     return data.access;
   };
 
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
     const userMessage = { role: 'user', content: input };
     setMessages((prev) => [...prev, userMessage]);
@@ -47,9 +48,9 @@ export default function Chatbot({ onClose }) {
 
     try {
       let token = localStorage.getItem('access');
-      if (!token) throw new Error('No access token');
+      if (!token) throw new Error('Please log in to use the assistant.');
 
-      // Build history (last 10 messages, exclude current)
+      // Build history (last 10 messages)
       const history = messages
         .slice(-10)
         .filter((m) => m.role === 'user' || m.role === 'assistant')
@@ -64,7 +65,7 @@ export default function Chatbot({ onClose }) {
         body: JSON.stringify({ message: input, history }),
       });
 
-      // Handle token refresh
+      // Token refresh on 401
       if (response.status === 401) {
         try {
           token = await refreshAccessToken();
@@ -83,12 +84,11 @@ export default function Chatbot({ onClose }) {
 
       if (!response.ok) {
         const text = await response.text();
-        throw new Error(`HTTP ${response.status}: ${text}`);
+        throw new Error(`HTTP ${response.status}: ${text.slice(0, 200)}`);
       }
 
       const data = await response.json();
 
-      // Append assistant message with optional action info
       setMessages((prev) => [
         ...prev,
         {
@@ -112,7 +112,7 @@ export default function Chatbot({ onClose }) {
   };
 
   // ---------------------------------------------------------------
-  // Action Renderer — shows what the chatbot did
+  // Render action results (publish, clap, follow, bookmark, search)
   // ---------------------------------------------------------------
   const renderAction = (action) => {
     if (!action || !action.executed || action.executed.length === 0) return null;
@@ -128,7 +128,7 @@ export default function Chatbot({ onClose }) {
               key={idx}
               className={`chatbot-action-item ${ok ? 'success' : 'error'}`}
             >
-              {/* Publish Article */}
+              {/* 📝 Publish */}
               {tool === 'publish_article' && ok && (
                 <div>
                   📝 <strong>Article published:</strong>{' '}
@@ -146,7 +146,7 @@ export default function Chatbot({ onClose }) {
                 </div>
               )}
 
-              {/* Clap */}
+              {/* 👏 Clap */}
               {tool === 'clap_article' && ok && (
                 <div>
                   👏 <strong>Clapped:</strong> {result.title}{' '}
@@ -156,14 +156,14 @@ export default function Chatbot({ onClose }) {
                 </div>
               )}
 
-              {/* Unclap */}
+              {/* 👏 Unclap */}
               {tool === 'unclap_article' && ok && (
                 <div>
                   👏 <strong>Clap removed:</strong> {result.title}
                 </div>
               )}
 
-              {/* Follow */}
+              {/* 👥 Follow */}
               {tool === 'follow_user' && ok && (
                 <div>
                   👥 <strong>Now following:</strong>{' '}
@@ -181,21 +181,21 @@ export default function Chatbot({ onClose }) {
                 </div>
               )}
 
-              {/* Unfollow */}
+              {/* 👥 Unfollow */}
               {tool === 'unfollow_user' && ok && (
                 <div>
                   👥 <strong>Unfollowed:</strong> @{result.handle}
                 </div>
               )}
 
-              {/* Bookmark */}
+              {/* 🔖 Bookmark */}
               {tool === 'bookmark_article' && ok && (
                 <div>
                   🔖 <strong>Bookmarked:</strong> {result.title}
                 </div>
               )}
 
-              {/* Search */}
+              {/* 🔍 Search */}
               {tool === 'search_articles' && ok && (
                 <div>
                   🔍 <strong>Found {result.count} article(s)</strong>
@@ -224,7 +224,7 @@ export default function Chatbot({ onClose }) {
                 </div>
               )}
 
-              {/* Error fallback */}
+              {/* ⚠️ Error */}
               {!ok && (
                 <div>
                   ⚠️ <strong>Action failed:</strong>{' '}
@@ -251,7 +251,7 @@ export default function Chatbot({ onClose }) {
         {messages.length === 0 && (
           <div className="chatbot-welcome">
             <p>
-              Hi! I can help you find articles <em>and</em> perform actions:
+              Hi! I can help you <em>find</em> articles and <em>perform actions</em>:
             </p>
             <ul className="chatbot-examples">
               <li>&quot;Publish an article titled Hello World&quot;</li>
@@ -272,7 +272,7 @@ export default function Chatbot({ onClose }) {
 
         {loading && (
           <div className="chatbot-message assistant">
-            <div className="message-content">Thinking...</div>
+            <div className="message-content">Thinking…</div>
           </div>
         )}
 
@@ -284,7 +284,7 @@ export default function Chatbot({ onClose }) {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask or say: 'publish an article...'"
+          placeholder="Ask or say: 'publish an article…'"
           disabled={loading}
         />
         <button type="submit" disabled={loading || !input.trim()}>

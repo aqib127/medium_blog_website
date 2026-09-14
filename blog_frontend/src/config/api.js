@@ -48,11 +48,12 @@ export const endpoints = {
   tags: `${normalizedBase}articles/tags/`,
   tagArticles: (slug) => `${normalizedBase}articles/?tags__slug=${slug}`,
 
-  // Chatbot — STREAMING (existing, keeps working)
+  // Chatbot — STREAMING (existing, keep for backward compat)
   chatbot: `${normalizedBase}rag/chat/stream/`,
 
-  // Chatbot — ACTIONS (new, non-streaming with function calling)
+  // Chatbot — ACTIONS (new, function calling)
   chatbotActions: `${normalizedBase}rag/chat/`,
+  chatbotHealth: `${normalizedBase}rag/health/`,
 };
 
 export default endpoints;
