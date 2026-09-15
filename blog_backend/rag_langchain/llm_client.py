@@ -138,7 +138,7 @@ class OllamaClient:
                     fn = tc.get("function", {}) or {}
                     args = fn.get("arguments", {})
 
-                    # ✅ CRITICAL FIX: arguments MUST be a dict (not a JSON string)
+                    # CRITICAL FIX: arguments MUST be a dict (not JSON string)
                     if isinstance(args, str):
                         try:
                             args = json.loads(args)
@@ -153,7 +153,7 @@ class OllamaClient:
                         type="function",
                         function=SimpleNamespace(
                             name=fn.get("name", ""),
-                            arguments=args,   # ← DICT, not string
+                            arguments=args,   # DICT, not string
                         )
                     ))
 
@@ -183,10 +183,10 @@ def get_llm_client():
     if _azure_is_configured():
         try:
             client = AzureOpenAIClient()
-            logger.info("✅ Using Azure OpenAI client")
+            logger.info("Using Azure OpenAI client")
             return client
         except Exception as e:
             logger.error(f"Azure OpenAI init failed: {e}. Falling back to Ollama.")
 
-    logger.info("⚠️  Using Ollama client (Azure OpenAI not configured)")
+    logger.info("Using Ollama client (Azure OpenAI not configured)")
     return OllamaClient()
