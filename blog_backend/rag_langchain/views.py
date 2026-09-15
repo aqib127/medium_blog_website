@@ -2,10 +2,10 @@
 rag_langchain/views.py
 
 Endpoints:
-  - POST /api/v1/rag/chat/stream/   → existing streaming chat (LangChain)
-  - POST /api/v1/rag/reindex/       → existing reindex
-  - POST /api/v1/rag/chat/          → NEW: chat with actions (function calling)
-  - GET  /api/v1/rag/health/        → NEW: health check
+  - POST /api/v1/rag/chat/stream/   -> existing streaming chat (LangChain)
+  - POST /api/v1/rag/reindex/       -> existing reindex
+  - POST /api/v1/rag/chat/          -> NEW: chat with actions (function calling)
+  - GET  /api/v1/rag/health/        -> NEW: health check
 """
 
 import json
@@ -25,7 +25,10 @@ from .tools import TOOLS_SCHEMA, execute_tool
 
 logger = logging.getLogger(__name__)
 
-# EXISTING VIEWS — KEEP UNCHANGED
+
+# ==================================================================
+# EXISTING VIEWS - KEEP UNCHANGED
+# ==================================================================
 
 class ChatStreamView(APIView):
     """Existing streaming chat using LangChain RAG."""
@@ -66,7 +69,9 @@ class ReindexView(APIView):
             return JsonResponse({'error': str(e)}, status=500)
 
 
+# ==================================================================
 # NEW: CHAT WITH ACTIONS
+# ==================================================================
 
 SYSTEM_PROMPT = """You are "Medium Blog Assistant", a helpful AI that can:
 
@@ -80,13 +85,71 @@ SYSTEM_PROMPT = """You are "Medium Blog Assistant", a helpful AI that can:
    - bookmark_article      (save article for later)
    - search_articles       (find articles by keyword)
 
+CRITICAL RULES FOR TOOL CALLING:
+
+1. NEVER pass placeholder values like "author_handle", "user_handle",
+   "article_id", "result.article_id", "result.author_handle", "example"
+   as tool arguments. ALWAYS use REAL values.
+
+2. WORK ONE ROUND AT A TIME. Do NOT chain tool calls with placeholders.
+   Instead:
+     - Round 1: call ONE tool (e.g. search_articles) and WAIT for the result.
+     - Round 2: use the REAL values from that result for the next tool.
+     - Round 3: continue if needed.
+
+3. When the user mentions an article by TITLE (not by ID):
+   - Call search_articles with the title as query.
+   - The result contains the real "id" and "author_handle".
+   - THEN (next round) use those REAL values for clap/bookmark/follow.
+
+4. When the user says "follow the author" or "follow its author":
+   - FIRST search_articles to find the article.
+   - Look at the "author_handle" field in the result.
+   - THEN call follow_user with that EXACT handle (without @).
+
+5. When the user says "follow @username":
+   - Call follow_user directly with handle="username" (remove the @).
+
+6. For clap_article / unclap_article / bookmark_article:
+   - ALWAYS use a NUMERIC article_id (e.g. 8, 12).
+   - NEVER pass a title string.
+
+EXAMPLES:
+
+User: "Like 'How to Learn Python' and follow its author."
+Round 1: search_articles(query="How to Learn Python")
+         -> Result: [{"id": 8, "author_handle": "ali-ahmad", ...}]
+Round 2: clap_article(article_id=8)
+Round 3: follow_user(handle="ali-ahmad")
+
+User: "Clap for article 5"
+-> clap_article(article_id=5)
+
+User: "Follow @aqib"
+-> follow_user(handle="aqib")
+
+User: "Bookmark 'Run AWS on your laptop'"
+Round 1: search_articles(query="Run AWS on your laptop")
+         -> Result: [{"id": 11, ...}]
+Round 2: bookmark_article(article_id=11)
+
 Rules:
-- When the user asks to DO something, call the appropriate tool.
-- If user asks to clap/follow/bookmark but doesn't specify WHICH article/user, ask for clarification.
 - Be concise. Confirm actions with a short summary.
-- If answering a question, reply normally.
 - Never claim an action succeeded unless the tool returned success=true.
+- If a tool fails, explain why briefly and suggest a fix.
 """
+
+
+def _parse_tool_args(raw_args):
+    """Safely parse tool arguments from dict or JSON string."""
+    if isinstance(raw_args, dict):
+        return raw_args
+    if isinstance(raw_args, str):
+        try:
+            return json.loads(raw_args)
+        except json.JSONDecodeError:
+            return {}
+    return {}
 
 
 @api_view(["POST"])
@@ -117,68 +180,77 @@ def chat_with_actions(request):
 
     messages.append({"role": "user", "content": user_message})
 
-    try:
-        resp = client.chat_with_tools(
-            messages=messages,
-            tools=TOOLS_SCHEMA,
-            tool_choice="auto",
-            temperature=0.3,
-        )
-    except Exception as e:
-        logger.exception("LLM call failed")
-        return Response({"error": f"LLM error: {e}"}, status=502)
-
-    choice = resp.choices[0]
-    assistant_msg = choice.message
-
-    tool_calls = getattr(assistant_msg, "tool_calls", None)
-    if not tool_calls:
-        return Response({
-            "reply": assistant_msg.content or "",
-            "action": None,
-        })
-
-    # Execute tools
+    # MAX 3 ROUNDS of tool calling (multi-step support)
+    MAX_ROUNDS = 3
     action_results = []
 
-    messages.append({
-        "role": "assistant",
-        "content": assistant_msg.content or "",
-        "tool_calls": [
-            {
-                "id": tc.id,
-                "type": "function",
-                "function": {
-                    "name": tc.function.name,
-                    "arguments": tc.function.arguments,
-                }
-            } for tc in tool_calls
-        ]
-    })
-
-    for tc in tool_calls:
-        tool_name = tc.function.name
+    for round_num in range(MAX_ROUNDS):
         try:
-            args = json.loads(tc.function.arguments or "{}")
-        except json.JSONDecodeError:
-            args = {}
+            resp = client.chat_with_tools(
+                messages=messages,
+                tools=TOOLS_SCHEMA,
+                tool_choice="auto",
+                temperature=0.3,
+            )
+        except Exception as e:
+            logger.exception("LLM call failed")
+            return Response({"error": f"LLM error: {e}"}, status=502)
 
-        logger.info(f"Executing tool: {tool_name} args={args}")
-        result = execute_tool(tool_name, args, request.user)
+        choice = resp.choices[0]
+        assistant_msg = choice.message
+        tool_calls = getattr(assistant_msg, "tool_calls", None)
 
-        action_results.append({
-            "tool": tool_name,
-            "args": args,
-            "result": result,
-        })
+        # No tool call -> done, return text reply
+        if not tool_calls:
+            return Response({
+                "reply": assistant_msg.content or "Done.",
+                "action": {
+                    "executed": action_results,
+                    "count": len(action_results),
+                } if action_results else None,
+            })
 
+        # Add assistant tool_call message to history
         messages.append({
-            "role": "tool",
-            "tool_call_id": tc.id,
-            "content": json.dumps(result),
+            "role": "assistant",
+            "content": assistant_msg.content or "",
+            "tool_calls": [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": (
+                            json.dumps(tc.function.arguments)
+                            if isinstance(tc.function.arguments, dict)
+                            else (tc.function.arguments or "{}")
+                        ),
+                    }
+                } for tc in tool_calls
+            ]
         })
 
-    # Followup LLM to produce natural reply
+        # Execute all tool calls in this round
+        for tc in tool_calls:
+            tool_name = tc.function.name
+            args = _parse_tool_args(tc.function.arguments)
+
+            logger.info(f"[Round {round_num+1}] Executing: {tool_name} args={args}")
+            result = execute_tool(tool_name, args, request.user)
+
+            action_results.append({
+                "tool": tool_name,
+                "args": args,
+                "result": result,
+            })
+
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.id,
+                "content": json.dumps(result),
+            })
+
+    # Max rounds reached - generate final reply
     try:
         followup = client.chat_with_tools(
             messages=messages,
@@ -199,7 +271,7 @@ def chat_with_actions(request):
         "action": {
             "executed": action_results,
             "count": len(action_results),
-        }
+        } if action_results else None,
     })
 
 

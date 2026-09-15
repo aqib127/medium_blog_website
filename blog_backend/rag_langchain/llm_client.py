@@ -13,24 +13,19 @@ from typing import List, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
+
+# ============================================================
 # HELPERS
+# ============================================================
 
 def _azure_is_configured() -> bool:
-    """
-    Check if Azure OpenAI is REALLY configured (not placeholder values).
-    
-    Returns False if:
-      - endpoint or key is empty
-      - endpoint/key contains placeholder text like "your-openai-resource"
-      - endpoint doesn't look like a real Azure OpenAI URL
-    """
+    """Check if Azure OpenAI is REALLY configured (not placeholder)."""
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "").strip()
     key = os.getenv("AZURE_OPENAI_API_KEY", "").strip()
 
     if not endpoint or not key:
         return False
 
-    # Reject placeholder values
     placeholders = [
         "your-openai-resource",
         "your-real-key-here",
@@ -45,19 +40,19 @@ def _azure_is_configured() -> bool:
             logger.debug(f"Azure OpenAI placeholder detected: '{ph}'")
             return False
 
-    # Must be a real Azure OpenAI endpoint
     if not endpoint.startswith("https://"):
         return False
     if ".openai.azure.com" not in endpoint:
         return False
-
-    # Key must be reasonably long (real Azure keys are 32+ chars)
     if len(key) < 20:
         return False
 
     return True
 
+
+# ============================================================
 # AZURE OPENAI CLIENT
+# ============================================================
 
 class AzureOpenAIClient:
     def __init__(self):
@@ -95,12 +90,15 @@ class AzureOpenAIClient:
 
         return self.client.chat.completions.create(**kwargs)
 
+
+# ============================================================
 # OLLAMA CLIENT (with real tool calling)
+# ============================================================
 
 class OllamaClient:
     """
     Ollama client with native tool-calling support.
-    Requires qwen2.5:7b+ or llama3.1:8b+ (7B models support tools).
+    Requires qwen2.5:3b+ or llama3.1:8b+ (models with 'tools' capability).
     """
 
     def __init__(self):
@@ -108,7 +106,6 @@ class OllamaClient:
         self.client = ollama.Client(
             host=os.getenv("OLLAMA_HOST", "http://localhost:11434")
         )
-        # Prefer OLLAMA_MODEL; fallback to OLLAMA_CHAT_MODEL; then default
         self.model = (
             os.getenv("OLLAMA_MODEL")
             or os.getenv("OLLAMA_CHAT_MODEL")
@@ -133,22 +130,30 @@ class OllamaClient:
             content = msg.get("content", "") or ""
             raw_tool_calls = msg.get("tool_calls") or []
 
-            # Normalize Ollama tool_calls → OpenAI shape
+            # Normalize Ollama tool_calls -> OpenAI shape
             tool_calls = None
             if raw_tool_calls:
                 tool_calls = []
                 for i, tc in enumerate(raw_tool_calls):
                     fn = tc.get("function", {}) or {}
                     args = fn.get("arguments", {})
-                    # Ollama sometimes returns dict, sometimes JSON string
-                    if isinstance(args, dict):
-                        args = json.dumps(args)
+
+                    # ✅ CRITICAL FIX: arguments MUST be a dict (not a JSON string)
+                    if isinstance(args, str):
+                        try:
+                            args = json.loads(args)
+                        except json.JSONDecodeError:
+                            logger.warning(f"Failed to parse tool args: {args}")
+                            args = {}
+                    elif not isinstance(args, dict):
+                        args = {}
+
                     tool_calls.append(SimpleNamespace(
                         id=f"call_{i}",
                         type="function",
                         function=SimpleNamespace(
                             name=fn.get("name", ""),
-                            arguments=args,
+                            arguments=args,   # ← DICT, not string
                         )
                     ))
 
@@ -169,13 +174,12 @@ class OllamaClient:
             return SimpleNamespace(choices=[choice])
 
 
+# ============================================================
 # FACTORY
+# ============================================================
 
 def get_llm_client():
-    """
-    Return Azure OpenAI client if properly configured,
-    otherwise fall back to Ollama.
-    """
+    """Return Azure client if properly configured, else Ollama."""
     if _azure_is_configured():
         try:
             client = AzureOpenAIClient()
