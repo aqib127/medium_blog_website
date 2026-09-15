@@ -494,6 +494,44 @@ TOOLS_SCHEMA = [
             }
         }
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_my_following",
+            "description": "Get the list of users that the currently logged-in user is following. Use when user asks 'show my following', 'who am I following', 'list my following'.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_trending_articles",
+            "description": "Get the most popular/trending articles based on claps. Use when user asks 'show trending', 'what's popular', 'top articles'.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "limit": {"type": "integer", "default": 5}
+                },
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_my_bookmarks",
+            "description": "Get the list of articles bookmarked by the currently logged-in user. Use when user asks 'show my bookmarks', 'my saved articles'.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    },
 ]
 
 
@@ -709,6 +747,87 @@ def _tool_search_articles(user, query, limit=5):
 
 # TOOL DISPATCHER
 
+
+
+def _tool_get_my_following(user):
+    """Get list of users the current user is following."""
+    if not user or not user.is_authenticated:
+        return {"error": "Login required."}
+
+    follows = Follow.objects.filter(follower=user).select_related('followed')[:20]
+    results = [
+        {
+            "handle": f.followed.handle,
+            "name": f.followed.name,
+            "bio": (f.followed.bio or "")[:100],
+        }
+        for f in follows
+    ]
+
+    return {
+        "success": True,
+        "count": len(results),
+        "results": results,
+        "message": f"You are following {len(results)} user(s)."
+    }
+
+
+def _tool_get_trending_articles(user, limit=5):
+    """Get trending articles by claps."""
+    try:
+        limit = int(limit)
+    except (ValueError, TypeError):
+        limit = 5
+
+    articles = Article.objects.filter(status='published').order_by('-claps_count')[:limit]
+    results = [
+        {
+            "id": a.id,
+            "title": a.title,
+            "author": a.author.name,
+            "author_handle": a.author.handle,
+            "claps": a.claps_count,
+            "comments": a.comments_count,
+        }
+        for a in articles
+    ]
+
+    return {
+        "success": True,
+        "count": len(results),
+        "results": results,
+        "message": f"Found {len(results)} trending article(s)."
+    }
+
+
+def _tool_get_my_bookmarks(user):
+    """Get list of articles bookmarked by current user."""
+    if not user or not user.is_authenticated:
+        return {"error": "Login required."}
+
+    bookmarks = Bookmark.objects.filter(user=user).select_related(
+        'article', 'article__author'
+    ).order_by('-created_at')[:20]
+
+    results = [
+        {
+            "id": b.article.id,
+            "title": b.article.title,
+            "author": b.article.author.name,
+            "author_handle": b.article.author.handle,
+            "bookmarked_at": b.created_at.isoformat(),
+        }
+        for b in bookmarks
+    ]
+
+    return {
+        "success": True,
+        "count": len(results),
+        "results": results,
+        "message": f"You have {len(results)} bookmark(s)."
+    }
+
+
 TOOL_REGISTRY = {
     "publish_article": _tool_publish_article,
     "clap_article": _tool_clap_article,
@@ -717,6 +836,9 @@ TOOL_REGISTRY = {
     "unfollow_user": _tool_unfollow_user,
     "bookmark_article": _tool_bookmark_article,
     "search_articles": _tool_search_articles,
+    "get_my_following": _tool_get_my_following,
+    "get_trending_articles": _tool_get_trending_articles,
+    "get_my_bookmarks": _tool_get_my_bookmarks,
 }
 
 
