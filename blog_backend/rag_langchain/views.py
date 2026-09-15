@@ -167,7 +167,7 @@ def chat_with_actions(request):
 
     messages.append({"role": "user", "content": user_message})
 
-    MAX_ROUNDS = 4
+    MAX_ROUNDS = 3
     action_results = []
 
     for round_num in range(MAX_ROUNDS):
