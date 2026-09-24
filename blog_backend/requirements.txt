@@ -24,3 +24,4 @@ ollama>=0.3.0
 tiktoken>=0.7.0
 django-redis==5.4.0
 redis>=5.0.0,<6.0.0
+django-anymail[resend]>=15.0
