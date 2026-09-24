@@ -20,6 +20,7 @@ from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 from django.utils import timezone
 import logging
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -579,6 +580,10 @@ def _tool_publish_article(user, title, body, dek="", tags=None):
     except Exception:
         pass
 
+    # ✅ Invalidate trending cache
+    cache.delete("trending_articles_5")
+    cache.delete("trending_articles_10")
+
     return {
         "success": True,
         "article_id": article.id,
@@ -605,6 +610,9 @@ def _tool_clap_article(user, article_id):
             claps_count=models.F('claps_count') + 1
         )
         article.refresh_from_db()
+        # ✅ Invalidate trending cache (claps changed)
+        cache.delete("trending_articles_5")
+        cache.delete("trending_articles_10")
 
     return {
         "success": True,
@@ -635,6 +643,9 @@ def _tool_unclap_article(user, article_id):
             )
         )
         article.refresh_from_db()
+        # ✅ Invalidate trending cache
+        cache.delete("trending_articles_5")
+        cache.delete("trending_articles_10")
 
     return {
         "success": True,
@@ -779,6 +790,14 @@ def _tool_get_trending_articles(user, limit=5):
     except (ValueError, TypeError):
         limit = 5
 
+    # ✅ Try cache first
+    cache_key = f"trending_articles_{limit}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        logger.info(f"Cache HIT: {cache_key}")
+        return cached
+
+    logger.info(f"Cache MISS: {cache_key}")
     articles = Article.objects.filter(status='published').order_by('-claps_count')[:limit]
     results = [
         {
@@ -792,12 +811,15 @@ def _tool_get_trending_articles(user, limit=5):
         for a in articles
     ]
 
-    return {
+    result = {
         "success": True,
         "count": len(results),
         "results": results,
         "message": f"Found {len(results)} trending article(s)."
     }
+
+    cache.set(cache_key, result, 300)
+    return result
 
 
 def _tool_get_my_bookmarks(user):

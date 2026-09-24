@@ -31,6 +31,7 @@ urlpatterns = [
     path('api/v1/history/', include('reading_history.urls')),
     path('api/v1/reports/', include('reports.urls')),
     path('api/v1/rag/', include('rag_langchain.urls')),
+    path('api/v1/newsletter/', include('newsletter.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ]

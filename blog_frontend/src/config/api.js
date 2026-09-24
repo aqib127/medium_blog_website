@@ -3,15 +3,12 @@ const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/
 const normalizedBase = baseURL.endsWith('/') ? baseURL : baseURL + '/';
 
 export const endpoints = {
-  // Auth endpoints
   register: `${normalizedBase}auth/register/`,
   login: `${normalizedBase}auth/login/`,
   refresh: `${normalizedBase}auth/refresh/`,
   verify: `${normalizedBase}auth/verify/`,
   me: `${normalizedBase}auth/me/`,
   logout: `${normalizedBase}auth/logout/`,
-
-  // Users
   users: (handle) => `${normalizedBase}users/${handle}/`,
   userStories: (handle) => `${normalizedBase}users/${handle}/stories/`,
   userFollowers: (handle) => `${normalizedBase}users/${handle}/followers/`,
@@ -19,41 +16,30 @@ export const endpoints = {
   userFollow: (handle) => `${normalizedBase}users/${handle}/follow/`,
   userUpdate: (handle) => `${normalizedBase}users/${handle}/update/`,
   userAvatar: (handle) => `${normalizedBase}users/${handle}/avatar/`,
-
-  // Articles
   articles: `${normalizedBase}articles/`,
   article: (id) => `${normalizedBase}articles/${id}/`,
   clap: (id) => `${normalizedBase}articles/${id}/clap/`,
   featured: `${normalizedBase}articles/featured/`,
   trending: `${normalizedBase}articles/trending/`,
-
-  // Comments
   comments: `${normalizedBase}comments/`,
   commentList: (articleId) => `${normalizedBase}comments/?article=${articleId}`,
-
-  // Bookmarks
   bookmarks: `${normalizedBase}bookmarks/`,
   bookmark: (articleId) => `${normalizedBase}bookmarks/${articleId}/`,
-
-  // Notifications
   notifications: `${normalizedBase}notifications/`,
   notificationRead: (id) => `${normalizedBase}notifications/${id}/read/`,
   notificationReadAll: `${normalizedBase}notifications/read_all/`,
-
-  // History & Reports
   history: `${normalizedBase}history/`,
   reports: `${normalizedBase}reports/`,
-
-  // Tags
   tags: `${normalizedBase}articles/tags/`,
   tagArticles: (slug) => `${normalizedBase}articles/?tags__slug=${slug}`,
-
-  // Chatbot — STREAMING (existing, keep for backward compat)
   chatbot: `${normalizedBase}rag/chat/stream/`,
-
-  // Chatbot — ACTIONS (new, function calling)
   chatbotActions: `${normalizedBase}rag/chat/`,
   chatbotHealth: `${normalizedBase}rag/health/`,
+  newsletterSubscribe: `${normalizedBase}newsletter/subscribe/`,
+  newsletterConfirm: (token) => `${normalizedBase}newsletter/confirm/${token}/`,
+  newsletterUnsubscribe: `${normalizedBase}newsletter/unsubscribe/`,
+  newsletterStatus: (email) => `${normalizedBase}newsletter/status/?email=${encodeURIComponent(email)}`,
+  newsletterStats: `${normalizedBase}newsletter/stats/`,
 };
 
 export default endpoints;

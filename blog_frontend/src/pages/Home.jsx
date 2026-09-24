@@ -4,6 +4,7 @@ import { endpoints } from '../config/api';
 import apiClient from '../utils/apiClient';
 import ArticleCard from '../components/ArticleCard';
 import Sidebar from '../components/Sidebar';
+import NewsletterSignup from '../components/NewsletterSignup';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import '../styles/home.css';
@@ -154,6 +155,13 @@ export default function Home() {
         </main>
         <Sidebar activeTag={activeTag} onTagSelect={handleTagSelect} tags={tags} loading={loading && tags.length === 0} />
       </div>
+
+      {/* Newsletter Signup */}
+      <section className="newsletter-section">
+        <div className="container">
+          <NewsletterSignup source="home" />
+        </div>
+      </section>
     </>
   );
 }

@@ -14,8 +14,10 @@ import TagPage from "./pages/TagPage";
 import ProfileSettings from "./pages/ProfileSettings";
 import ChatbotButton from "./components/ChatbotButton";
 import ProtectedRoute from "./components/ProtectedRoute";
+import NewsletterConfirm from "./components/NewsletterConfirm";
 import "./styles/global.css";
 import "./styles/chatbot.css";
+import "./styles/newsletter.css";
 import Articles from "./pages/Articles";
 
 function App() {
@@ -26,42 +28,15 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/articles" element={<Articles />} />
         <Route path="/article/:id" element={<Article />} />
+        <Route path="/newsletter/confirm" element={<NewsletterConfirm />} />
         <Route path="/:handle" element={<Profile />} />
-        <Route
-          path="/write"
-          element={
-            <ProtectedRoute>
-              <Write />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/write" element={<ProtectedRoute><Write /></ProtectedRoute>} />
         <Route path="/search" element={<Search />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
-        <Route
-          path="/saved"
-          element={
-            <ProtectedRoute>
-              <SavedArticles />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/drafts"
-          element={
-            <ProtectedRoute>
-              <Drafts />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <ProfileSettings />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/saved" element={<ProtectedRoute><SavedArticles /></ProtectedRoute>} />
+        <Route path="/drafts" element={<ProtectedRoute><Drafts /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
         <Route path="/tag/:tagName" element={<TagPage />} />
       </Routes>
       <Footer />

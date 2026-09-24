@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'reading_history',
     'reports',
     'rag_langchain',
+    'newsletter',
 ]
 
 MIDDLEWARE = [
@@ -167,7 +168,7 @@ SIMPLE_JWT = {
     'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
-CSRF_TRUSTED_ORIGINS = [
+CSRF_TRUSTED_ORIGINS += [
     'https://backend-production-b4f9d.up.railway.app',
 ]
 
@@ -206,6 +207,74 @@ if pg_password:
 PGVECTOR_CONNECTION_STRING = (
     f"postgresql+psycopg://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_name}"
 )
+
+# ============================================================
+# Redis Cache Configuration
+# ============================================================
+
+REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
+REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
+REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', '').strip()
+
+# Build Redis URL (with password if set)
+if REDIS_PASSWORD:
+    REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/0"
+else:
+    REDIS_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
+
+# Detect TLS (Azure Redis uses 6380 with TLS)
+REDIS_USE_TLS = REDIS_PORT in ('6380', '10000')
+if REDIS_USE_TLS and not REDIS_URL.startswith('rediss://'):
+    REDIS_URL = REDIS_URL.replace('redis://', 'rediss://', 1)
+
+# Build pool kwargs — ssl_cert_reqs ONLY when TLS
+_pool_kwargs = {
+    "max_connections": 50,
+    "retry_on_timeout": True,
+}
+if REDIS_USE_TLS:
+    _pool_kwargs["ssl_cert_reqs"] = None
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SOCKET_CONNECT_TIMEOUT": 10,
+            "SOCKET_TIMEOUT": 10,
+            "IGNORE_EXCEPTIONS": True,
+            "CONNECTION_POOL_KWARGS": _pool_kwargs,
+        },
+        "KEY_PREFIX": "medium_blog",
+        "TIMEOUT": 300,
+    }
+}
+
+# Session: Store in Redis (faster than DB)
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
+SESSION_COOKIE_AGE = 86400  # 24 hours
+
+
+
+# ============================================================
+# Email Configuration (Newsletter)
+# ============================================================
+
+EMAIL_BACKEND = os.environ.get(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.console.EmailBackend',
+)
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@mediumblog.com')
+
+# Frontend URL for email links
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
 
 # Logging
 LOGGING = {
